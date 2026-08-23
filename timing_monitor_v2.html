@@ -236,7 +236,13 @@ button:disabled{opacity:.4;cursor:not-allowed}
   <b>점수 산식 (100점)</b> — 스토캐스틱 5/10/20 종합 32 · 3년 가격 위치 16 · RSI(14) 10 ·
   200일선 이격 12 · 매크로 12 · 공포탐욕 18.<br>
   <b>공포탐욕 반영</b> — SK하이닉스는 반도체 50 / 한국 40 / 미국 10, 미국 반도체주는 미국 70 / 반도체 30,
-  나머지 미국 자산은 미국 100. 금은 위험자산 공포가 클수록 이미 가격에 반영된 것으로 보아 반대로 계산합니다.<br>
+  비트코인은 크립토 60 / 미국 40, 나머지 미국 자산은 미국 100.
+  금은 위험자산 공포가 클수록 이미 가격에 반영된 것으로 보아 반대로 계산합니다.<br>
+  <b>변동성 보정</b> — 200일선 이격 점수는 자산별 변동성으로 나눠 정규화합니다
+  (비트코인 2.6배, AMD·NVDA 1.5배, 하이닉스 1.4배, SCHD 0.7배). 이 보정이 없으면
+  변동성이 큰 자산은 상시 감점, 배당 ETF는 상시 만점이 나옵니다.<br>
+  <b>크립토 지수</b> — alternative.me의 Crypto Fear &amp; Greed Index 원본값을 그대로 씁니다.
+  자체 계산이 아닙니다.<br>
   <b>한국 지수 산출</b> — feargreed.co.kr이 공개한 가중치(변동성 30 · 모멘텀 25 · 주가강도 15 ·
   추세 15 · KOSDAQ 10 · 안전자산 5)를 따르되, VKOSPI를 받을 수 없어 KOSPI 20일 실현변동성으로 대체했습니다.
   그래서 원본 사이트 값과 몇 점 차이가 납니다.<br>
@@ -251,17 +257,22 @@ button:disabled{opacity:.4;cursor:not-allowed}
 "use strict";
 
 /* ═══════════ 종목 정의 ═══════════ */
+/* vol: 200일선 이격 민감도. 변동성 큰 자산일수록 값을 키워 과한 감점을 막는다 */
 const TICKERS = [
-  { sym:"000660.KS", name:"SK하이닉스", cur:"KRW", kind:"kr-semi",
+  { sym:"000660.KS", name:"SK하이닉스", cur:"KRW", kind:"kr-semi", vol:1.4,
     fgMix:{ semi:.5, kr:.4, us:.1 },
     note:"원화 약세는 수출 마진에 유리하지만 외국인 수급에는 불리합니다." },
-  { sym:"GLD",   name:"금 (GLD)",  cur:"USD", kind:"gold",      fgMix:{ us:1 }, invertFG:true,
+  { sym:"GLD",   name:"금 (GLD)",  cur:"USD", kind:"gold",      vol:0.8, fgMix:{ us:1 }, invertFG:true,
     note:"위험자산 공포가 커지면 금은 이미 올라 있는 경우가 많아 공포지수를 반대로 반영했습니다." },
-  { sym:"GOOGL", name:"알파벳",    cur:"USD", kind:"us-growth", fgMix:{ us:1 },  note:"" },
-  { sym:"AMD",   name:"AMD",       cur:"USD", kind:"us-semi",   fgMix:{ us:.7, semi:.3 }, note:"" },
-  { sym:"NVDA",  name:"엔비디아",  cur:"USD", kind:"us-semi",   fgMix:{ us:.7, semi:.3 }, note:"" },
-  { sym:"QQQ",   name:"나스닥100", cur:"USD", kind:"us-index",  fgMix:{ us:1 },  note:"" },
-  { sym:"SPY",   name:"S&P 500",   cur:"USD", kind:"us-index",  fgMix:{ us:1 },  note:"" },
+  { sym:"GOOGL", name:"알파벳",    cur:"USD", kind:"us-growth", vol:1.0, fgMix:{ us:1 },  note:"" },
+  { sym:"AMD",   name:"AMD",       cur:"USD", kind:"us-semi",   vol:1.5, fgMix:{ us:.7, semi:.3 }, note:"" },
+  { sym:"NVDA",  name:"엔비디아",  cur:"USD", kind:"us-semi",   vol:1.5, fgMix:{ us:.7, semi:.3 }, note:"" },
+  { sym:"QQQ",   name:"나스닥100", cur:"USD", kind:"us-index",  vol:0.9, fgMix:{ us:1 },  note:"" },
+  { sym:"SPY",   name:"S&P 500",   cur:"USD", kind:"us-index",  vol:0.8, fgMix:{ us:1 },  note:"" },
+  { sym:"SCHD",  name:"SCHD 배당", cur:"USD", kind:"us-dividend", vol:0.7, fgMix:{ us:1 },
+    note:"배당성장 ETF라 낙폭이 얕습니다. 90점대가 잘 나오지 않으니 65점만 넘어도 유의미한 신호로 보십시오." },
+  { sym:"BTC-USD", name:"비트코인", cur:"USD", kind:"crypto",   vol:2.6, fgMix:{ crypto:.6, us:.4 },
+    note:"24시간 거래라 주말에도 값이 바뀝니다. 변동성이 커서 200일선 이격 기준을 완화 적용했습니다." },
 ];
 
 const STO_SET = [[5,3,3],[10,6,6],[20,12,12]];
@@ -298,6 +309,25 @@ async function tryFetch(url){
     }catch(e){ last=e; }
   }
   throw last || new Error("모든 경로 실패");
+}
+
+/* 크립토 공포탐욕 — alternative.me 공개 API (CORS 허용) */
+async function cryptoFG(){
+  const url = "https://api.alternative.me/fng/?limit=1";
+  const paths = [ url, ...FETCHERS.slice(1).map(f=>f.build(url)) ];
+  for (const p of paths){
+    try{
+      const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),10000);
+      const res=await fetch(p,{signal:ctl.signal,cache:"no-store"});
+      clearTimeout(to);
+      if(!res.ok) continue;
+      const j=await res.json();
+      const d=j?.data?.[0];
+      if(!d) continue;
+      return { score: parseInt(d.value,10), label: d.value_classification };
+    }catch(e){}
+  }
+  return null;
 }
 
 async function series(sym){
@@ -439,6 +469,18 @@ async function computeFG(){
     };
   } else g.semi = null;
 
+  /* ── 크립토 (외부 API) ── */
+  const cf = await cryptoFG();
+  if (cf){
+    const btc = await series("BTC-USD");
+    const sub = [{ n:"alternative.me 원본", v:cf.score, w:"100%" }];
+    if (btc){
+      sub.push({ n:"참고 · 125일선 모멘텀", v: map01(vsMA(btc,125), -25, 25) });
+      sub.push({ n:"참고 · 3년 가격 위치",  v: pricePct(btc, btc.length-1, 756).pct });
+    }
+    g.crypto = { score: cf.score, sub, label: cf.label };
+  } else g.crypto = null;
+
   /* ── 매크로 ── */
   const mk = (s) => { const r=S[s]; if(!r||r.length<25) return null;
     return { now:r[r.length-1].c, ago20:r[r.length-21].c }; };
@@ -468,9 +510,11 @@ function macroTilt(M){
 function macroPts(kind,T){
   if(!T.lines.length) return 6;
   let s=0;
-  if(kind==="gold")            s=T.rate*.45+T.dollar*.40+T.risk*.15;
-  else if(kind==="kr-semi")    s=T.rate*.30+T.risk*.35+T.dollar*.35;
-  else                         s=T.rate*.38+T.risk*.32+T.krw*.30;
+  if(kind==="gold")             s=T.rate*.45+T.dollar*.40+T.risk*.15;
+  else if(kind==="kr-semi")     s=T.rate*.30+T.risk*.35+T.dollar*.35;
+  else if(kind==="crypto")      s=T.risk*.45+T.dollar*.35+T.rate*.20;
+  else if(kind==="us-dividend") s=T.rate*.50+T.krw*.30+T.risk*.20;
+  else                          s=T.rate*.38+T.risk*.32+T.krw*.30;
   return (s+1)/2*12;
 }
 
@@ -480,7 +524,7 @@ function fgPts(t, G){
   const add=(key,label)=>{ const src=G[key]; if(!src||!mix[key]) return;
     sum+=src.score*mix[key]; w+=mix[key];
     parts.push(`${label} ${src.score}`); };
-  add("us","미국"); add("kr","한국"); add("semi","반도체");
+  add("us","미국"); add("kr","한국"); add("semi","반도체"); add("crypto","크립토");
   if(!w) return { pts:9, blend:null, text:"지수 없음" };
   let blend=sum/w;
   const eff = t.invertFG ? (100-blend) : blend;   // 금은 반대로
@@ -488,8 +532,9 @@ function fgPts(t, G){
 }
 
 /* ═══════════ 종합 점수 ═══════════ */
-function scoreAt(rows,ind,i,mPts,fPts){
+function scoreAt(rows,ind,i,mPts,fPts,volScale){
   if(i<210) return null;
+  const VS = volScale || 1;
   let kSum=0,cross=0,valid=0;
   ind.sto.forEach(s=>{
     const k=s.k[i],d=s.d[i],kp=s.k[i-1],dp=s.d[i-1];
@@ -506,7 +551,8 @@ function scoreAt(rows,ind,i,mPts,fPts){
   const rs=r==null?5:clamp((100-r)/100*10*1.25,0,10);
   const ma=ind.ma200[i]; let mp=6,gap=null;
   if(ma){ gap=(rows[i].c-ma)/ma*100;
-    if(gap<=-25) mp=7; else if(gap<=0) mp=12+gap*0.2; else mp=Math.max(0,12-gap*0.42);
+    const g2=gap/VS;                       // 변동성 정규화
+    if(g2<=-25) mp=7; else if(g2<=0) mp=12+g2*0.2; else mp=Math.max(0,12-g2*0.42);
     mp=clamp(mp,0,12); }
   const total=sto+pos+rs+mp+mPts+fPts;
   return { total:Math.round(clamp(total,0,100)),
@@ -514,10 +560,10 @@ function scoreAt(rows,ind,i,mPts,fPts){
     kAvg,cross,pct:pp.pct,lo:pp.lo,hi:pp.hi,rsi:r,gap };
 }
 
-function backtest(rows,ind,mPts,fPts,th){
+function backtest(rows,ind,mPts,fPts,th,VS){
   const a20=[],a60=[];
   for(let i=210;i<rows.length-60;i++){
-    const s=scoreAt(rows,ind,i,mPts,fPts);
+    const s=scoreAt(rows,ind,i,mPts,fPts,VS);
     if(!s||s.total<th) continue;
     a20.push((rows[i+20].c/rows[i].c-1)*100);
     a60.push((rows[i+60].c/rows[i].c-1)*100);
@@ -556,9 +602,10 @@ const fgMood=v=>v<25?["극단적 공포","패닉 구간. 역발상 분할 매수
 function renderFG(G){
   const host=document.getElementById("fgGrid");
   const cards=[
-    { key:"us",   flag:"🇺🇸 미국",     tag:"S&P500 · CNN 방식 근사" },
-    { key:"kr",   flag:"🇰🇷 한국",     tag:"KOSPI · 6지표 가중" },
-    { key:"semi", flag:"🔧 한국 반도체", tag:"삼성·하이닉스·한미 바스켓" },
+    { key:"us",     flag:"🇺🇸 미국",      tag:"S&P500 · CNN 방식 근사" },
+    { key:"kr",     flag:"🇰🇷 한국",      tag:"KOSPI · 6지표 가중" },
+    { key:"semi",   flag:"🔧 한국 반도체", tag:"삼성·하이닉스·한미 바스켓" },
+    { key:"crypto", flag:"₿ 크립토",       tag:"alternative.me 원본" },
   ];
   host.innerHTML = cards.map(c=>{
     const d=G[c.key];
@@ -742,8 +789,9 @@ async function run(){
         rsi:rsi(rows,14), ma200:sma(rows.map(r=>r.c),200) };
       const mP=macroPts(t.kind,T);
       const fI=fgPts(t,G);
+      const VS=t.vol||1;
       const i=rows.length-1;
-      const s=scoreAt(rows,ind,i,mP,fI.pts);
+      const s=scoreAt(rows,ind,i,mP,fI.pts,VS);
       if(!s) throw new Error("지표 산출 실패");
       RESULTS.push({ ...t, rows, score:s, fgInfo:fI,
         stoNow: ind.sto.map(x=>x.k[i]??50),
@@ -753,7 +801,7 @@ async function run(){
             cross: kp!=null&&dp!=null&&kp<=dp&&x.k[i]>x.d[i] };
         }),
         last: rows[i].c, chgPct:(rows[i].c/rows[i-1].c-1)*100,
-        bt: backtest(rows,ind,mP,fI.pts,65), ex: extremes(rows) });
+        bt: backtest(rows,ind,mP,fI.pts,65,VS), ex: extremes(rows) });
     }catch(e){ fails++; RESULTS.push({...t,error:String(e.message||e)}); }
   }
   renderRows();
