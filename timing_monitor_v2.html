@@ -56,6 +56,55 @@ body{
 .sec a{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--cobalt);
   text-decoration:none;border-bottom:1px solid var(--cobalt)}
 
+/* ── SUMMARY BOARD ── */
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));
+  gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.bcard{background:var(--card);padding:11px 11px 9px;position:relative;
+  display:flex;flex-direction:column;gap:6px;min-height:126px}
+.bcard.dim{opacity:.45}
+.bcard .bt{display:flex;justify-content:space-between;align-items:baseline;gap:5px}
+.bcard .bn{font-family:'IBM Plex Sans Condensed',sans-serif;font-size:12.5px;
+  font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bcard .bg{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.09em;
+  color:var(--ink-3);text-transform:uppercase;white-space:nowrap}
+.bcard .bs{display:flex;align-items:baseline;gap:6px}
+.bcard .bv{font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:700;
+  line-height:.85;letter-spacing:-.04em}
+.bcard .bd{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600}
+.bcard canvas{width:100%;height:32px;display:block;margin-top:auto}
+.bcard .bl{font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--ink-3);
+  display:flex;justify-content:space-between}
+.board-note{font-size:11px;color:var(--ink-3);margin-top:8px;line-height:1.65}
+
+/* ── SCORE GUIDE ── */
+.guide{border:1px solid var(--rule);background:var(--card)}
+.g-row{display:grid;grid-template-columns:82px 118px 1fr;gap:14px;
+  padding:10px 14px;align-items:baseline;border-bottom:1px solid var(--rule)}
+.g-row:last-child{border-bottom:none}
+.g-row::before{content:'';position:absolute;left:0;width:3px;height:100%}
+.g-score{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;letter-spacing:-.01em}
+.g-act{font-family:'IBM Plex Sans Condensed',sans-serif;font-size:13.5px;font-weight:700}
+.g-do{font-size:12px;color:var(--ink-2);line-height:1.6}
+.g-row[data-band="a"] .g-score,.g-row[data-band="a"] .g-act{color:#0F4F3C}
+.g-row[data-band="b"] .g-score,.g-row[data-band="b"] .g-act{color:var(--jade)}
+.g-row[data-band="c"] .g-score,.g-row[data-band="c"] .g-act{color:var(--amber)}
+.g-row[data-band="d"] .g-score,.g-row[data-band="d"] .g-act{color:#C86A2E}
+.g-row[data-band="e"] .g-score,.g-row[data-band="e"] .g-act{color:var(--rust)}
+.guide-warn{font-size:11.5px;line-height:1.8;color:var(--ink-2);
+  background:var(--card);border-left:3px solid var(--rust);padding:12px 14px;margin-top:10px}
+.guide-warn b{color:var(--ink);font-weight:600}
+@media(max-width:640px){
+  .g-row{grid-template-columns:70px 1fr;gap:6px 12px}
+  .g-do{grid-column:1 / -1;padding-top:2px}
+}
+
+/* ── GROUP LABEL ── */
+.grp{display:flex;align-items:center;gap:9px;margin:14px 0 2px}
+.grp:first-child{margin-top:0}
+.grp span{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-3)}
+.grp .gl{flex:1;height:1px;background:var(--rule)}
+
 /* ── FEAR & GREED DIALS ── */
 .fg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
 .fg{background:var(--card);border:1px solid var(--rule);padding:15px 15px 13px;box-shadow:var(--shadow)}
@@ -207,15 +256,56 @@ button:disabled{opacity:.4;cursor:not-allowed}
 </header>
 <div class="rule-thin"></div>
 
-<div class="sec"><span class="n">00</span><h2>공포탐욕지수</h2><div class="ln"></div>
+<div class="sec"><span class="n">00</span><h2>한눈에 보기 · 점수와 1주 변화</h2><div class="ln"></div></div>
+<div class="board" id="board"></div>
+<div class="board-note" id="boardNote">계산 중입니다.</div>
+
+<div class="sec"><span class="n">01</span><h2>점수대별 대응</h2><div class="ln"></div></div>
+<div class="guide">
+  <div class="g-row" data-band="a">
+    <div class="g-score">80–100</div>
+    <div class="g-act">적극 매수</div>
+    <div class="g-do">목표 비중의 40~50%를 한 번에 집행. 3년에 몇 번 없는 구간입니다.</div>
+  </div>
+  <div class="g-row" data-band="b">
+    <div class="g-score">65–79</div>
+    <div class="g-act">분할 매수 개시</div>
+    <div class="g-do">목표 비중의 20~30%씩. 다음 회차까지 최소 2주는 간격을 둡니다.</div>
+  </div>
+  <div class="g-row" data-band="c">
+    <div class="g-score">45–64</div>
+    <div class="g-act">적립만 유지</div>
+    <div class="g-do">기존 적립식은 그대로. 추가 자금은 넣지 않고 현금을 모읍니다.</div>
+  </div>
+  <div class="g-row" data-band="d">
+    <div class="g-score">25–44</div>
+    <div class="g-act">신규 매수 중단</div>
+    <div class="g-do">보유분은 유지. 새로 사지만 않으면 됩니다.</div>
+  </div>
+  <div class="g-row" data-band="e">
+    <div class="g-score">0–24</div>
+    <div class="g-act">비중 축소 검토</div>
+    <div class="g-do">한 종목이 포트폴리오의 25~30%를 넘었다면 일부만 정리합니다.</div>
+  </div>
+</div>
+<div class="guide-warn">
+  <b>이 점수를 매도 신호로 쓰지 마십시오.</b>
+  낮은 점수는 "비싸다"는 뜻이지 "팔아라"가 아닙니다. 좋은 자산은 비싼 채로 몇 년씩 오릅니다.
+  차익 실현은 ① 투자 논거가 깨졌을 때 ② 한 종목 비중이 과도할 때 ③ 현금이 필요할 때로 판단하십시오.
+  해외주식은 매도 시 22% 양도세가 확정되므로 점수 하나로 세금을 확정 지을 이유가 없습니다.<br>
+  기준선은 종목마다 달라야 합니다. 각 종목 상세의 <b>3년 백테스트</b>에서 60일 승률이 70% 이상이면 60점으로 낮추고,
+  50% 미만이면 75점으로 올리거나 그 종목에는 이 산식을 쓰지 마십시오.
+</div>
+
+<div class="sec"><span class="n">02</span><h2>공포탐욕지수</h2><div class="ln"></div>
   <a href="https://feargreed.co.kr/" target="_blank" rel="noopener">feargreed.co.kr 교차확인 ↗</a></div>
 <div class="fg-grid" id="fgGrid"></div>
 
-<div class="sec"><span class="n">01</span><h2>매크로 컨디션</h2><div class="ln"></div></div>
+<div class="sec"><span class="n">03</span><h2>매크로 컨디션</h2><div class="ln"></div></div>
 <div class="macro" id="macro"></div>
 <div class="macro-note" id="macroNote">불러오는 중입니다.</div>
 
-<div class="sec"><span class="n">02</span><h2>종목별 매수 적합도</h2><div class="ln"></div></div>
+<div class="sec"><span class="n">04</span><h2>종목별 매수 적합도</h2><div class="ln"></div></div>
 <div class="rows" id="rows"></div>
 
 <div class="controls">
@@ -257,22 +347,39 @@ button:disabled{opacity:.4;cursor:not-allowed}
 "use strict";
 
 /* ═══════════ 종목 정의 ═══════════ */
-/* vol: 200일선 이격 민감도. 변동성 큰 자산일수록 값을 키워 과한 감점을 막는다 */
+/* 순서: 달러 → 금 → 비트코인 → 한국주식 → 미국주식 → 미국 ETF
+   vol: 200일선 이격 민감도. 변동성 큰 자산일수록 값을 키워 과한 감점을 막는다 */
 const TICKERS = [
-  { sym:"000660.KS", name:"SK하이닉스", cur:"KRW", kind:"kr-semi", vol:1.4,
-    fgMix:{ semi:.5, kr:.4, us:.1 },
-    note:"원화 약세는 수출 마진에 유리하지만 외국인 수급에는 불리합니다." },
-  { sym:"GLD",   name:"금 (GLD)",  cur:"USD", kind:"gold",      vol:0.8, fgMix:{ us:1 }, invertFG:true,
+  { sym:"KRW=X", name:"달러 매수", cur:"KRW", kind:"fx-usd", vol:0.35,
+    group:"통화", fgMix:{ us:1 }, invertFG:true, short:"USD",
+    note:"원화로 달러를 사는 관점입니다. 원/달러 환율이 낮을수록 점수가 올라갑니다. 위험자산 공포가 커지면 달러가 안전자산으로 몰려 비싸지므로 공포지수를 반대로 반영했습니다." },
+
+  { sym:"GLD", name:"금 (GLD)", cur:"USD", kind:"gold", vol:0.8,
+    group:"실물", fgMix:{ us:1 }, invertFG:true, short:"GLD",
     note:"위험자산 공포가 커지면 금은 이미 올라 있는 경우가 많아 공포지수를 반대로 반영했습니다." },
-  { sym:"GOOGL", name:"알파벳",    cur:"USD", kind:"us-growth", vol:1.0, fgMix:{ us:1 },  note:"" },
-  { sym:"AMD",   name:"AMD",       cur:"USD", kind:"us-semi",   vol:1.5, fgMix:{ us:.7, semi:.3 }, note:"" },
-  { sym:"NVDA",  name:"엔비디아",  cur:"USD", kind:"us-semi",   vol:1.5, fgMix:{ us:.7, semi:.3 }, note:"" },
-  { sym:"QQQ",   name:"나스닥100", cur:"USD", kind:"us-index",  vol:0.9, fgMix:{ us:1 },  note:"" },
-  { sym:"SPY",   name:"S&P 500",   cur:"USD", kind:"us-index",  vol:0.8, fgMix:{ us:1 },  note:"" },
-  { sym:"SCHD",  name:"SCHD 배당", cur:"USD", kind:"us-dividend", vol:0.7, fgMix:{ us:1 },
-    note:"배당성장 ETF라 낙폭이 얕습니다. 90점대가 잘 나오지 않으니 65점만 넘어도 유의미한 신호로 보십시오." },
-  { sym:"BTC-USD", name:"비트코인", cur:"USD", kind:"crypto",   vol:2.6, fgMix:{ crypto:.6, us:.4 },
+
+  { sym:"BTC-USD", name:"비트코인", cur:"USD", kind:"crypto", vol:2.6,
+    group:"디지털자산", fgMix:{ crypto:.6, us:.4 }, short:"BTC",
     note:"24시간 거래라 주말에도 값이 바뀝니다. 변동성이 커서 200일선 이격 기준을 완화 적용했습니다." },
+
+  { sym:"000660.KS", name:"SK하이닉스", cur:"KRW", kind:"kr-semi", vol:1.4,
+    group:"한국 주식", fgMix:{ semi:.5, kr:.4, us:.1 }, short:"하이닉스",
+    note:"원화 약세는 수출 마진에 유리하지만 외국인 수급에는 불리합니다." },
+
+  { sym:"GOOGL", name:"알파벳", cur:"USD", kind:"us-growth", vol:1.0,
+    group:"미국 주식", fgMix:{ us:1 }, short:"GOOGL", note:"" },
+  { sym:"NVDA", name:"엔비디아", cur:"USD", kind:"us-semi", vol:1.5,
+    group:"미국 주식", fgMix:{ us:.7, semi:.3 }, short:"NVDA", note:"" },
+  { sym:"AMD", name:"AMD", cur:"USD", kind:"us-semi", vol:1.5,
+    group:"미국 주식", fgMix:{ us:.7, semi:.3 }, short:"AMD", note:"" },
+
+  { sym:"QQQ", name:"나스닥100", cur:"USD", kind:"us-index", vol:0.9,
+    group:"미국 ETF", fgMix:{ us:1 }, short:"QQQ", note:"" },
+  { sym:"SPY", name:"S&P 500", cur:"USD", kind:"us-index", vol:0.8,
+    group:"미국 ETF", fgMix:{ us:1 }, short:"SPY", note:"" },
+  { sym:"SCHD", name:"SCHD 배당", cur:"USD", kind:"us-dividend", vol:0.7,
+    group:"미국 ETF", fgMix:{ us:1 }, short:"SCHD",
+    note:"배당성장 ETF라 낙폭이 얕습니다. 90점대가 잘 나오지 않으니 65점만 넘어도 유의미한 신호로 보십시오." },
 ];
 
 const STO_SET = [[5,3,3],[10,6,6],[20,12,12]];
@@ -511,6 +618,7 @@ function macroPts(kind,T){
   if(!T.lines.length) return 6;
   let s=0;
   if(kind==="gold")             s=T.rate*.45+T.dollar*.40+T.risk*.15;
+  else if(kind==="fx-usd")      s=T.dollar*.50+T.krw*.50;
   else if(kind==="kr-semi")     s=T.rate*.30+T.risk*.35+T.dollar*.35;
   else if(kind==="crypto")      s=T.risk*.45+T.dollar*.35+T.rate*.20;
   else if(kind==="us-dividend") s=T.rate*.50+T.krw*.30+T.risk*.20;
@@ -668,13 +776,87 @@ function sparkline(cv,rows,lo,hi){
   g.fillStyle="#15181E"; g.fill();
 }
 
+/* ── 상단 요약 보드 ── */
+function miniSpark(cv, hist, col){
+  const dpr=window.devicePixelRatio||1, W=cv.clientWidth||110, H=32;
+  cv.width=W*dpr; cv.height=H*dpr;
+  const g=cv.getContext("2d"); g.scale(dpr,dpr); g.clearRect(0,0,W,H);
+  if(hist.length<2) return;
+  const vs=hist.map(h=>h.v);
+  let lo=Math.min(...vs), hi=Math.max(...vs);
+  const mid=(lo+hi)/2, half=Math.max((hi-lo)/2, 4);   // 최소 진폭 확보
+  lo=mid-half; hi=mid+half;
+  const x=i=>(i/(hist.length-1))*(W-3)+1.5;
+  const y=v=>H-4-((v-lo)/(hi-lo))*(H-9);
+
+  // 65점 기준선
+  if(65>=lo&&65<=hi){
+    const yy=y(65);
+    g.beginPath(); g.setLineDash([2,3]);
+    g.moveTo(0,yy); g.lineTo(W,yy);
+    g.strokeStyle="rgba(27,110,82,.45)"; g.lineWidth=1; g.stroke();
+    g.setLineDash([]);
+  }
+  g.beginPath();
+  hist.forEach((h,i)=>i?g.lineTo(x(i),y(h.v)):g.moveTo(x(i),y(h.v)));
+  g.strokeStyle=col; g.lineWidth=1.8; g.lineJoin="round"; g.stroke();
+  g.beginPath(); g.arc(x(hist.length-1),y(hist[hist.length-1].v),2.4,0,Math.PI*2);
+  g.fillStyle=col; g.fill();
+}
+
+function renderBoard(){
+  const host=document.getElementById("board");
+  host.innerHTML="";
+  RESULTS.forEach(R=>{
+    const el=document.createElement("div");
+    el.className="bcard";
+    if(R.error){
+      el.classList.add("dim");
+      el.innerHTML=`<div class="bt"><span class="bn">${R.short||R.name}</span></div>
+        <div class="bs"><span class="bv" style="color:var(--ink-3)">—</span></div>
+        <div class="bl"><span>불러오지 못함</span></div>`;
+      host.appendChild(el); return;
+    }
+    const s=R.score.total, col=scoreColor(s);
+    const d=R.delta7;
+    const dTxt = d==null ? "—" : (d>0?"▲ +"+d:d<0?"▼ "+d:"— 0");
+    const dCol = d==null?"var(--ink-3)":d>0?"var(--jade)":d<0?"var(--rust)":"var(--ink-3)";
+    el.innerHTML=`
+      <div class="bt"><span class="bn">${R.short||R.name}</span><span class="bg">${R.group}</span></div>
+      <div class="bs"><span class="bv" style="color:${col}">${s}</span>
+        <span class="bd" style="color:${dCol}">${dTxt}</span></div>
+      <canvas></canvas>
+      <div class="bl"><span>10일 전</span><span>오늘</span></div>`;
+    host.appendChild(el);
+    requestAnimationFrame(()=>miniSpark(el.querySelector("canvas"), R.hist, col));
+  });
+
+  const ok=RESULTS.filter(r=>!r.error);
+  const risers=ok.filter(r=>r.delta7>0).length;
+  const buys=ok.filter(r=>r.score.total>=65).map(r=>r.short||r.name);
+  document.getElementById("boardNote").innerHTML =
+    `점선은 65점 기준선입니다. 숫자 옆 화살표는 5거래일 전 대비 변화입니다. ` +
+    `현재 ${ok.length}개 중 ${risers}개가 상승, ` +
+    (buys.length? `<b>${buys.join(" · ")}</b>가 65점 이상입니다.` : `65점 이상은 없습니다.`) +
+    `<br>1주 변화는 가격 지표(스토캐스틱·가격 위치·RSI·이평선)만 반영합니다. ` +
+    `매크로와 공포탐욕은 과거값을 받을 수 없어 현재값으로 고정했습니다.`;
+}
+
 let RESULTS=[], sortByScore=false, allOpen=false;
 
 function renderRows(){
   const host=document.getElementById("rows");
   const list=sortByScore?[...RESULTS].sort((a,b)=>(b.score?.total??-1)-(a.score?.total??-1)):RESULTS;
   host.innerHTML="";
+  let lastGroup=null;
   list.forEach(R=>{
+    if(!sortByScore && R.group && R.group!==lastGroup){
+      lastGroup=R.group;
+      const g=document.createElement("div");
+      g.className="grp";
+      g.innerHTML=`<span>${R.group}</span><div class="gl"></div>`;
+      host.appendChild(g);
+    }
     if(R.error){
       const e=document.createElement("div"); e.className="row";
       e.innerHTML=`<div class="r-id"><div class="nm">${R.name}</div><div class="sym">${R.sym}</div></div>
@@ -793,7 +975,16 @@ async function run(){
       const i=rows.length-1;
       const s=scoreAt(rows,ind,i,mP,fI.pts,VS);
       if(!s) throw new Error("지표 산출 실패");
-      RESULTS.push({ ...t, rows, score:s, fgInfo:fI,
+
+      /* 최근 10거래일 점수 이력 (가격 지표만 변동, 매크로·공포탐욕은 고정) */
+      const hist=[];
+      for(let j=Math.max(210,i-9); j<=i; j++){
+        const sj=scoreAt(rows,ind,j,mP,fI.pts,VS);
+        if(sj) hist.push({t:rows[j].t, v:sj.total});
+      }
+      const wk = hist.length>=6 ? hist[hist.length-6].v : null;
+      const delta7 = wk==null ? null : s.total - wk;
+      RESULTS.push({ ...t, rows, score:s, fgInfo:fI, hist, delta7,
         stoNow: ind.sto.map(x=>x.k[i]??50),
         stoDetail: ind.sto.map((x,ix)=>{
           const [n,k,d]=STO_SET[ix], kp=x.k[i-1], dp=x.d[i-1];
@@ -804,6 +995,7 @@ async function run(){
         bt: backtest(rows,ind,mP,fI.pts,65,VS), ex: extremes(rows) });
     }catch(e){ fails++; RESULTS.push({...t,error:String(e.message||e)}); }
   }
+  renderBoard();
   renderRows();
 
   const now=new Date();
@@ -841,6 +1033,7 @@ document.getElementById("btnExpand").addEventListener("click",e=>{
   e.target.textContent=allOpen?"전체 상세 접기":"전체 상세 펼치기"; renderRows();
 });
 window.addEventListener("resize",()=>{
+  if(RESULTS.length) renderBoard();
   document.querySelectorAll(".detail.show canvas").forEach(c=>delete c.dataset.drawn);
   const shown=[...document.querySelectorAll(".detail.show")];
   const ok=RESULTS.filter(r=>!r.error);
