@@ -1,0 +1,64 @@
+name: 데이터 갱신
+
+on:
+  schedule:
+    # 한국시간 기준 07:15, 15:15, 23:15 (UTC 22:15 전날, 06:15, 14:15)
+    # cron은 UTC 기준. 하루 3번이면 장 시작 전/후 데이터가 어느 정도 신선하게 유지됨.
+    - cron: "15 22 * * *"
+    - cron: "15 6  * * *"
+    - cron: "15 14 * * *"
+  workflow_dispatch: {}   # Actions 탭에서 수동 실행 버튼도 쓸 수 있게
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-refresh
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 의존성 설치
+        run: pip install --upgrade yfinance
+
+      - name: data.json 생성
+        id: fetch
+        run: python fetch_data.py
+        continue-on-error: true   # 부분 실패여도 아래에서 커밋 여부를 직접 판단
+
+      - name: 결과 확인
+        run: |
+          if [ ! -f data.json ]; then
+            echo "data.json이 아예 생성되지 않았습니다. 이전 버전을 그대로 둡니다."
+            exit 1
+          fi
+          python3 -c "
+          import json
+          d = json.load(open('data.json'))
+          n = len(d['series']); total = len(d['symbols'])
+          print(f'{n}/{total}개 심볼 성공')
+          print('실패:', d['failed'] if d['failed'] else '없음')
+          "
+
+      - name: 변경 여부 확인 후 커밋
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          if git diff --cached --quiet; then
+            echo "변경 없음 — 커밋 생략"
+          else
+            git commit -m "데이터 자동 갱신 $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
