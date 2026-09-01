@@ -17,8 +17,11 @@ from datetime import datetime, timezone
 import yfinance as yf
 
 # ── 종목 정의 (Invest.html의 TICKERS와 동일하게 유지할 것) ──
+# 주의: CNYKRW=X는 야후 파이낸스에 존재하지 않는 심볼이다.
+# Invest.html은 이를 KRW=X ÷ CNY=X 로 직접 합성해 계산하므로
+# 여기서 수집을 시도할 필요가 없다 (시도해도 매번 실패만 기록됨).
 TICKERS = [
-    "KRW=X", "CNYKRW=X", "GLD", "BTC-USD",
+    "KRW=X", "GLD", "BTC-USD",
     "000660.KS", "009150.KS",
     "GOOGL", "NVDA", "AMD", "MPWR",
     "QQQ", "SPY", "SCHD", "AIPO",
