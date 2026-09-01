@@ -361,7 +361,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 <div class="rows" id="rows"></div>
 
 <div class="controls">
-  <button id="btnRefresh">지금 다시 계산</button>
+  <button id="btnRefresh">화면 다시 그리기</button>
   <button class="ghost" id="btnSort">점수순 정렬</button>
   <button class="ghost" id="btnExpand">전체 상세 펼치기</button>
 </div>
@@ -384,7 +384,11 @@ button:disabled{opacity:.4;cursor:not-allowed}
   기존 ATR 변동성 항목은 이 불일치 때문에 값이 망가져 상승일 비율로 교체했습니다.<br>
   <b>배분 추천</b> — 오늘 신규 자금 1,000만원을 넣는다고 가정한 배분안입니다.
   기존 보유 자산·세금·환전 비용·최소 거래 단위는 반영하지 않은 참고용 계산입니다.<br>
-  <b>데이터</b> — Yahoo Finance 일봉. 지연 시세이며 실시간이 아닙니다. 투자 손익 책임은 본인에게 있습니다.
+  <b>데이터</b> — Yahoo Finance 일봉을 GitHub Actions가 하루 3회 서버에서 직접 받아
+  <code>data.json</code>으로 저장하고, 이 페이지는 그 파일만 읽습니다. 브라우저가 외부 API를
+  직접 호출하지 않으므로 CORS 프록시가 필요 없고, 그만큼 "가끔 안 되는" 문제가 줄어듭니다.
+  다만 지연 시세이며 실시간이 아니고, 최신성은 마지막 자동 갱신 시각(우측 상단)에 달려 있습니다.
+  투자 손익 책임은 본인에게 있습니다.
 </div>
 
 </div>
@@ -447,52 +451,34 @@ const AUX = ["^GSPC","SPY","^VIX","TLT","HYG","LQD","RSP",
              "005930.KS","000660.KS","042700.KS","^TNX","KRW=X","CNY=X","DX-Y.NYB"];
 
 /* ═══════════ 데이터 수집 ═══════════ */
-const FETCHERS = [
-  { name:"직접",       build:u=>u },
-  { name:"allorigins", build:u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u) },
-  { name:"corsproxy",  build:u=>"https://corsproxy.io/?url="+encodeURIComponent(u) },
-  { name:"codetabs",   build:u=>"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u) },
-];
-let activeFetcher = null;
-const CACHE = {};
+/* ═══════════ 데이터 수집 ═══════════
+   과거: 브라우저가 매번 CORS 프록시(allorigins 등)를 거쳐 Yahoo를 직접 호출.
+         프록시가 무료 공용 인프라라 예고 없이 막히거나 절반만 성공하는 문제가 있었다.
+   현재: GitHub Actions가 서버에서 미리 받아 data.json으로 커밋해두고,
+         브라우저는 그 한 개의 정적 파일만 읽는다. 프록시가 필요 없다. */
 
-const yURL = s => "https://query1.finance.yahoo.com/v8/finance/chart/"
-  + encodeURIComponent(s) + "?range=3y&interval=1d&includePrePost=false";
+let DATA = null;          // data.json 전체
+let DATA_ERROR = null;
+let DATA_META = null;     // { generated_at, failed:[...] }
 
-async function tryFetch(url){
-  const order = activeFetcher ? [activeFetcher,...FETCHERS.filter(f=>f!==activeFetcher)] : FETCHERS;
-  let last=null;
-  for (const f of order){
-    try{
-      const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),15000);
-      const res=await fetch(f.build(url),{signal:ctl.signal,cache:"no-store"});
-      clearTimeout(to);
-      if(!res.ok) throw new Error("HTTP "+res.status);
-      const j=await res.json();
-      if(!j?.chart?.result?.[0]) throw new Error("응답 형식 불일치");
-      activeFetcher=f; return j;
-    }catch(e){ last=e; }
+async function loadDataJson(){
+  if (DATA || DATA_ERROR) return;
+  try{
+    const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),15000);
+    const res=await fetch("./data.json?ts="+Date.now(), {signal:ctl.signal, cache:"no-store"});
+    clearTimeout(to);
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    DATA = await res.json();
+    DATA_META = { generated_at: DATA.generated_at, failed: DATA.failed||[] };
+  }catch(e){
+    DATA_ERROR = String(e.message || e);
   }
-  throw last || new Error("모든 경로 실패");
 }
 
-/* 크립토 공포탐욕 */
 async function cryptoFG(){
-  const url = "https://api.alternative.me/fng/?limit=1";
-  const paths = [ url, ...FETCHERS.slice(1).map(f=>f.build(url)) ];
-  for (const p of paths){
-    try{
-      const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),10000);
-      const res=await fetch(p,{signal:ctl.signal,cache:"no-store"});
-      clearTimeout(to);
-      if(!res.ok) continue;
-      const j=await res.json();
-      const d=j?.data?.[0];
-      if(!d) continue;
-      return { score: parseInt(d.value,10), label: d.value_classification };
-    }catch(e){}
-  }
-  return null;
+  await loadDataJson();
+  if(!DATA || !DATA.crypto_fg || !DATA.crypto_fg.ok) return null;
+  return { score: DATA.crypto_fg.score, label: DATA.crypto_fg.label };
 }
 
 function atrPct(rows,n){
@@ -563,23 +549,14 @@ async function loadTicker(t){
   return { rows, derived };
 }
 
+/* data.json의 series[sym]을 그대로 반환.
+   예전과 시그니처가 같아 seriesAny·synthSeries·loadTicker를 손대지 않아도 된다. */
 async function series(sym){
-  if (CACHE[sym] !== undefined) return CACHE[sym];
-  try{
-    const j = await tryFetch(yURL(sym));
-    const r = j.chart.result[0], ts = r.timestamp||[], q = r.indicators.quote[0];
-    const adj = r.indicators.adjclose?.[0]?.adjclose;
-    const out=[];
-    for(let i=0;i<ts.length;i++){
-      const c=(adj&&adj[i]!=null)?adj[i]:q.close[i], h=q.high[i], l=q.low[i];
-      if(c==null||h==null||l==null) continue;
-      out.push({t:ts[i]*1000,c,h,l});
-    }
-    CACHE[sym]=out.length?out:null;
-  }catch(e){ CACHE[sym]=null; }
-  return CACHE[sym];
+  await loadDataJson();
+  if(!DATA || !DATA.series) return null;
+  const rows = DATA.series[sym];
+  return (rows && rows.length) ? rows : null;
 }
-
 /* ═══════════ 지표 ═══════════ */
 function sma(a,n){const o=new Array(a.length).fill(null);let s=0;
   for(let i=0;i<a.length;i++){if(a[i]==null){s=0;continue}s+=a[i];
@@ -1295,12 +1272,13 @@ function buildDetail(R){
 }
 
 /* ═══════════ 실행 ═══════════ */
-async function run(){
+async function run(forceReload){
   const btn=document.getElementById("btnRefresh"); btn.disabled=true;
   document.getElementById("errbox").innerHTML="";
   document.getElementById("st-state").textContent="계산 중";
   document.getElementById("status").textContent="공포탐욕지수 계산 중…";
-  for(const k in CACHE) delete CACHE[k];
+
+  if(forceReload){ DATA=null; DATA_ERROR=null; DATA_META=null; }
 
   const G=await computeFG();
   renderFG(G);
@@ -1354,7 +1332,11 @@ async function run(){
   document.getElementById("st-state").textContent = fails?`일부 실패 (${fails}/${TICKERS.length})`:"최신";
   document.getElementById("st-time").textContent =
     now.toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
-  document.getElementById("st-src").textContent = "경로 "+(activeFetcher?activeFetcher.name:"—");
+  document.getElementById("st-src").textContent =
+    DATA_META && DATA_META.generated_at
+      ? "데이터 기준 " + new Date(DATA_META.generated_at).toLocaleString("ko-KR",
+          {month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})
+      : "데이터 시각 확인 불가";
 
   const ok=RESULTS.filter(r=>!r.error);
   const best=ok.length?[...ok].sort((a,b)=>b.score.total-a.score.total)[0]:null;
@@ -1362,20 +1344,30 @@ async function run(){
     ? `계산 완료 · 현재 최고 점수는 <b>${best.name} ${best.score.total}점</b>입니다. 행을 누르면 근거가 펼쳐집니다.`
     : "계산할 수 있는 종목이 없습니다.";
 
-  if(fails===TICKERS.length){
+  if(DATA_ERROR){
     document.getElementById("errbox").innerHTML=
-      `<div class="err"><b>데이터를 전혀 불러오지 못했습니다.</b><br>
-       파일을 더블클릭해서 연 경우(<code>file://</code>) 브라우저가 외부 요청을 막습니다.
-       주소창이 <code>http://localhost</code> 또는 <code>https://</code>로 시작해야 합니다.<br>
-       · 윈도우: 폴더 주소창에 <code>cmd</code> 입력 → <code>python -m http.server</code> → 
-       <code>http://localhost:8000/</code> 접속<br>
-       · 아이폰: GitHub Pages 등에 올린 뒤 https 주소로 접속<br>
-       · 광고 차단 확장 프로그램을 잠시 꺼보세요.</div>`;
+      `<div class="err"><b>data.json을 불러오지 못했습니다.</b><br>
+       (${DATA_ERROR})<br><br>
+       · GitHub Pages 저장소 루트에 <code>data.json</code>이 있는지 확인하십시오.<br>
+       · 파일을 <code>file://</code>로 직접 열면 브라우저가 로컬 JSON 요청도 막습니다.
+       반드시 <code>https://사용자명.github.io/저장소명/</code> 주소로 접속하십시오.<br>
+       · Actions 탭에서 "데이터 갱신" 워크플로가 성공했는지 확인하십시오.</div>`;
+  } else if(fails===TICKERS.length){
+    document.getElementById("errbox").innerHTML=
+      `<div class="err"><b>data.json은 열렸지만 종목 데이터가 비어 있습니다.</b><br>
+       Actions 탭에서 최근 실행 로그를 확인하십시오. 야후 쪽 일시 차단이면
+       다음 자동 실행(하루 3회) 때 복구됩니다. 지금 바로 갱신하려면
+       저장소 Actions → "데이터 갱신" → "Run workflow"를 눌러 수동 실행하십시오.</div>`;
+  } else if(DATA_META && DATA_META.failed && DATA_META.failed.length){
+    document.getElementById("errbox").innerHTML=
+      `<div class="err" style="border-left-color:var(--amber)">
+       <b>일부 심볼만 최신 데이터를 받지 못했습니다:</b> ${DATA_META.failed.join(", ")}<br>
+       나머지 종목은 정상입니다. 다음 자동 갱신 때 복구를 시도합니다.</div>`;
   }
   btn.disabled=false;
 }
 
-document.getElementById("btnRefresh").addEventListener("click",run);
+document.getElementById("btnRefresh").addEventListener("click",()=>run(true));
 document.getElementById("btnSort").addEventListener("click",e=>{
   sortByScore=!sortByScore;
   e.target.textContent=sortByScore?"원래 순서로":"점수순 정렬"; renderRows();
