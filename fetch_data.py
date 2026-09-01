@@ -29,6 +29,8 @@ AUX = [
     "^GSPC", "SPY", "^VIX", "TLT", "HYG", "LQD", "RSP",
     "005930.KS", "000660.KS", "042700.KS",
     "^TNX", "KRW=X", "CNY=X", "DX-Y.NYB",
+    "^KS11", "069500.KS", "148020.KS",   # 코스피 (원본 → ETF 폴백 2종)
+    "^KQ11", "229200.KS", "091180.KS",    # 코스닥 (원본 → KODEX코스닥150 → TIGER코스닥150 폴백)
 ]
 
 ALL_SYMBOLS = sorted(set(TICKERS + AUX))

@@ -278,6 +278,48 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .err{border-left:3px solid var(--rust);background:var(--card);padding:12px 14px;
   font-size:12.5px;line-height:1.75;margin-top:12px}
 .err code{font-family:'IBM Plex Mono',monospace;background:var(--paper);padding:1px 5px}
+/* ── TICKER MANAGER ── */
+.ticker-mgr{background:var(--card);border:1px solid var(--rule);box-shadow:var(--shadow);padding:14px}
+.tm-form{display:grid;grid-template-columns:1.3fr 1.1fr 1fr auto;gap:8px}
+@media(max-width:700px){.tm-form{grid-template-columns:1fr 1fr}}
+.tm-form input, .tm-form select{
+  font-family:'IBM Plex Mono',monospace;font-size:12.5px;
+  padding:9px 10px;border:1px solid var(--rule);background:var(--paper-2);
+  color:var(--ink);border-radius:4px}
+.tm-form input::placeholder{color:var(--ink-3);font-family:'IBM Plex Sans KR',sans-serif;font-size:11.5px}
+.tm-form button{padding:9px 16px;font-size:12.5px}
+.tm-msg{font-size:11.5px;margin-top:8px;min-height:16px}
+.tm-msg.ok{color:var(--jade)}
+.tm-msg.err{color:var(--rust)}
+.tm-list{margin-top:12px;display:flex;flex-direction:column;gap:1px}
+.tm-item{display:flex;align-items:center;gap:10px;padding:7px 8px;
+  background:var(--paper-2);font-size:12px}
+.tm-item.hidden-item{opacity:.5}
+.tm-item .ti-sym{font-family:'IBM Plex Mono',monospace;font-weight:600;min-width:110px}
+.tm-item .ti-name{flex:1;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-item .ti-grp{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ink-3);
+  padding:2px 6px;background:var(--card);border-radius:3px;white-space:nowrap}
+.tm-item .ti-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:1px 5px;
+  border-radius:3px;background:rgba(34,70,127,.12);color:var(--cobalt)}
+.tm-item button{padding:3px 9px;font-size:11px;background:transparent;
+  border:1px solid var(--rule);color:var(--rust);flex-shrink:0}
+.tm-item button.restore{color:var(--jade)}
+.tm-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.tm-actions button.small{flex:0 0 auto;padding:8px 14px;font-size:12px}
+.tm-note{font-size:10.5px;line-height:1.7;color:var(--ink-3);margin-top:12px;
+  padding-top:10px;border-top:1px dotted var(--rule)}
+.tm-note code{background:var(--paper-2);padding:1px 4px;border-radius:2px}
+.tm-modal-bg{position:fixed;inset:0;background:rgba(21,24,30,.6);z-index:200;
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.tm-modal{background:var(--card);border:1px solid var(--rule);padding:18px;
+  max-width:520px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.tm-modal h4{font-family:'IBM Plex Sans Condensed',sans-serif;font-size:15px;margin-bottom:10px}
+.tm-modal textarea{width:100%;height:120px;font-family:'IBM Plex Mono',monospace;
+  font-size:11px;padding:10px;border:1px solid var(--rule);background:var(--paper-2);
+  color:var(--ink);resize:vertical}
+.tm-modal .tm-modal-btns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+.tm-modal .tm-modal-btns button{padding:8px 16px;font-size:12.5px}
+
 .foot{margin-top:34px;padding-top:15px;border-top:1px solid var(--rule);
   font-size:11px;line-height:1.85;color:var(--ink-3)}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;
@@ -357,7 +399,41 @@ button:disabled{opacity:.4;cursor:not-allowed}
 <div class="macro" id="macro"></div>
 <div class="macro-note" id="macroNote">불러오는 중입니다.</div>
 
-<div class="sec"><span class="n">05</span><h2>종목별 매수 적합도 &amp; 웅줍 포인트</h2><div class="ln"></div></div>
+<div class="sec"><span class="n">05</span><h2>종목 관리</h2><div class="ln"></div></div>
+<div class="ticker-mgr">
+  <div class="tm-form">
+    <input id="tmSym" type="text" placeholder="심볼 (예: TSLA, 373220.KS, ETH-USD)" maxlength="20">
+    <input id="tmName" type="text" placeholder="표시 이름 (비우면 심볼 그대로)" maxlength="20">
+    <select id="tmGroup">
+      <option value="한국 주식">한국 주식</option>
+      <option value="미국 주식">미국 주식</option>
+      <option value="미국 ETF">미국 ETF</option>
+      <option value="통화">통화</option>
+      <option value="실물">실물</option>
+      <option value="디지털자산">디지털자산</option>
+      <option value="사용자 추가">기타</option>
+    </select>
+    <button id="tmAdd">추가</button>
+  </div>
+  <div class="tm-msg" id="tmMsg"></div>
+  <div class="tm-list" id="tmList"></div>
+  <div class="tm-actions">
+    <button class="ghost small" id="tmExport">설정 내보내기</button>
+    <button class="ghost small" id="tmImport">가져오기</button>
+    <button class="ghost small" id="tmReset">기본값으로 초기화</button>
+  </div>
+  <div class="tm-note">
+    이 목록은 <b>이 브라우저에만</b> 저장됩니다. 다른 기기에서 같은 목록을 쓰려면
+    "설정 내보내기"로 나온 텍스트를 복사해 다른 기기의 "가져오기"에 붙여넣으십시오.<br>
+    새로 추가한 심볼은 <b>다음 데이터 갱신(하루 5회 자동, 또는 Actions에서 수동 실행) 이후</b>부터
+    점수가 표시됩니다. 추가 직후에는 "데이터 대기 중"으로 보이는 게 정상입니다.<br>
+    심볼 표기: 한국 종목은 <code>.KS</code>(코스피)·<code>.KQ</code>(코스닥)를 붙이고
+    (예: <code>005930.KS</code>), 미국은 티커 그대로, 코인은 <code>BTC-USD</code> 형식,
+    환율은 <code>JPY=X</code> 형식입니다.
+  </div>
+</div>
+
+<div class="sec"><span class="n">06</span><h2>종목별 매수 적합도 &amp; 웅줍 포인트</h2><div class="ln"></div></div>
 <div class="rows" id="rows"></div>
 
 <div class="controls">
@@ -384,11 +460,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
   기존 ATR 변동성 항목은 이 불일치 때문에 값이 망가져 상승일 비율로 교체했습니다.<br>
   <b>배분 추천</b> — 오늘 신규 자금 1,000만원을 넣는다고 가정한 배분안입니다.
   기존 보유 자산·세금·환전 비용·최소 거래 단위는 반영하지 않은 참고용 계산입니다.<br>
-  <b>데이터</b> — Yahoo Finance 일봉을 GitHub Actions가 하루 3회 서버에서 직접 받아
-  <code>data.json</code>으로 저장하고, 이 페이지는 그 파일만 읽습니다. 브라우저가 외부 API를
-  직접 호출하지 않으므로 CORS 프록시가 필요 없고, 그만큼 "가끔 안 되는" 문제가 줄어듭니다.
-  다만 지연 시세이며 실시간이 아니고, 최신성은 마지막 자동 갱신 시각(우측 상단)에 달려 있습니다.
-  투자 손익 책임은 본인에게 있습니다.
+  <b>데이터</b> — Yahoo Finance 일봉. 지연 시세이며 실시간이 아닙니다. 투자 손익 책임은 본인에게 있습니다.
 </div>
 
 </div>
@@ -397,7 +469,9 @@ button:disabled{opacity:.4;cursor:not-allowed}
 "use strict";
 
 /* ═══════════ 종목 정의 ═══════════ */
-const TICKERS = [
+/* 기본 제공 종목. 사용자가 추가/삭제해도 이 배열 자체는 안 바뀐다.
+   "기본값으로 초기화" 시 이 목록으로 되돌아간다. */
+const DEFAULT_TICKERS = [
   { sym:"KRW=X", name:"달러 매수", cur:"KRW", kind:"fx-usd", vol:0.35,
     group:"통화", fgMix:{ us:1 }, invertFG:true, short:"USD",
     note:"원화로 달러를 사는 관점입니다. 원/달러가 낮을수록 점수가 올라갑니다. 위험자산 공포가 커지면 달러가 안전자산으로 몰려 비싸지므로 공포지수를 반대로 반영했습니다." },
@@ -444,11 +518,82 @@ const TICKERS = [
     note:"AI 데이터센터 전력 인프라 테마 ETF입니다. 상장 이력이 짧아 3년 백테스트 표본이 부족할 수 있으며, 그 경우 점수 신뢰도가 낮습니다." },
 ];
 
+/* ═══════════ 종목 관리 (추가/삭제) ═══════════
+   localStorage에 저장하므로 이 브라우저·이 기기에서만 유지된다.
+   다른 기기에서 보려면 "설정 내보내기"로 텍스트를 옮겨 "가져오기"에 붙여넣으면 된다. */
+const LS_KEY = "timingDesk.tickers.v1";
+const LS_HIDDEN_KEY = "timingDesk.hidden.v1";
+
+function guessProfile(sym){
+  const s = sym.toUpperCase();
+  const isKR = /\.KS$|\.KQ$/.test(s);
+  const isFX = /=X$/.test(s);
+  const isCrypto = /-USD$/.test(s) && !isFX;
+
+  if (isFX)     return { kind:"fx-usd",  vol:0.4,  fgMix:{us:1}, invertFG:true, cur:"KRW" };
+  if (isCrypto) return { kind:"crypto",  vol:2.2,  fgMix:{crypto:.6, us:.4}, cur:"USD" };
+  if (isKR)     return { kind:"kr-semi", vol:1.3,  fgMix:{kr:.6, us:.2, semi:.2}, cur:"KRW" };
+  return          { kind:"us-growth", vol:1.1,  fgMix:{us:1}, cur:"USD" };
+}
+
+function loadCustomTickers(){
+  try{ const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : []; }
+  catch(e){ return []; }
+}
+function saveCustomTickers(list){ localStorage.setItem(LS_KEY, JSON.stringify(list)); }
+function loadHidden(){
+  try{ const raw = localStorage.getItem(LS_HIDDEN_KEY); return raw ? new Set(JSON.parse(raw)) : new Set(); }
+  catch(e){ return new Set(); }
+}
+function saveHidden(set){ localStorage.setItem(LS_HIDDEN_KEY, JSON.stringify([...set])); }
+
+function getActiveTickers(){
+  const hidden = loadHidden();
+  const base = DEFAULT_TICKERS.filter(t => !hidden.has(t.sym));
+  return [...base, ...loadCustomTickers()];
+}
+
+function addCustomTicker(sym, name, group){
+  sym = sym.trim().toUpperCase();
+  name = name.trim() || sym;
+  group = group.trim() || "사용자 추가";
+  if(!sym) return { ok:false, msg:"심볼을 입력해 주십시오." };
+  if(getActiveTickers().some(t => t.sym === sym))
+    return { ok:false, msg:sym+"은(는) 이미 목록에 있습니다." };
+
+  const prof = guessProfile(sym);
+  const custom = loadCustomTickers();
+  custom.push({
+    sym, name, group, short: name.length>6 ? sym : name,
+    custom:true, addedAt:new Date().toISOString(),
+    note:"사용자가 추가한 종목입니다. 위험 성향(변동성·매크로 가중치)은 심볼 패턴으로 추정한 값이라 정밀하지 않을 수 있습니다.",
+    ...prof
+  });
+  saveCustomTickers(custom);
+  return { ok:true, msg:sym+" 추가됨. 다음 데이터 갱신(또는 Actions 수동 실행) 후 점수가 표시됩니다." };
+}
+
+function removeTicker(sym){
+  if(DEFAULT_TICKERS.some(t=>t.sym===sym)){
+    const hidden = loadHidden(); hidden.add(sym); saveHidden(hidden);
+  }else{
+    saveCustomTickers(loadCustomTickers().filter(t=>t.sym!==sym));
+  }
+}
+function restoreDefaultTicker(sym){
+  const hidden = loadHidden(); hidden.delete(sym); saveHidden(hidden);
+}
+function resetAllTickers(){
+  localStorage.removeItem(LS_KEY);
+  localStorage.removeItem(LS_HIDDEN_KEY);
+}
+
 const STO_SET = [[5,3,3],[10,6,6],[20,12,12]];
 
 /* 보조 데이터 (공포탐욕·매크로 계산용) */
 const AUX = ["^GSPC","SPY","^VIX","TLT","HYG","LQD","RSP",
-             "005930.KS","000660.KS","042700.KS","^TNX","KRW=X","CNY=X","DX-Y.NYB"];
+             "005930.KS","000660.KS","042700.KS","^TNX","KRW=X","CNY=X","DX-Y.NYB",
+             "^KS11","069500.KS","148020.KS","^KQ11","229200.KS","091180.KS"];
 
 /* ═══════════ 데이터 수집 ═══════════ */
 /* ═══════════ 데이터 수집 ═══════════
@@ -457,9 +602,9 @@ const AUX = ["^GSPC","SPY","^VIX","TLT","HYG","LQD","RSP",
    현재: GitHub Actions가 서버에서 미리 받아 data.json으로 커밋해두고,
          브라우저는 그 한 개의 정적 파일만 읽는다. 프록시가 필요 없다. */
 
-let DATA = null;          // data.json 전체
+let DATA = null;
 let DATA_ERROR = null;
-let DATA_META = null;     // { generated_at, failed:[...] }
+let DATA_META = null;
 
 async function loadDataJson(){
   if (DATA || DATA_ERROR) return;
@@ -549,14 +694,13 @@ async function loadTicker(t){
   return { rows, derived };
 }
 
-/* data.json의 series[sym]을 그대로 반환.
-   예전과 시그니처가 같아 seriesAny·synthSeries·loadTicker를 손대지 않아도 된다. */
 async function series(sym){
   await loadDataJson();
   if(!DATA || !DATA.series) return null;
   const rows = DATA.series[sym];
   return (rows && rows.length) ? rows : null;
 }
+
 /* ═══════════ 지표 ═══════════ */
 function sma(a,n){const o=new Array(a.length).fill(null);let s=0;
   for(let i=0;i<a.length;i++){if(a[i]==null){s=0;continue}s+=a[i];
@@ -660,7 +804,7 @@ async function computeFG(){
   g.us = blendFG(usItems);
 
   const KX = await seriesAny(["^KS11","069500.KS","148020.KS"]);
-  const QX = await seriesAny(["^KQ11","229200.KS","251340.KS"]);
+  const QX = await seriesAny(["^KQ11","229200.KS","091180.KS"]);   // KOSDAQ 폴백: 원본 → KODEX코스닥150 → TIGER코스닥150
   const K = KX.rows, Q = QX.rows;
 
   if (K){
@@ -1277,7 +1421,6 @@ async function run(forceReload){
   document.getElementById("errbox").innerHTML="";
   document.getElementById("st-state").textContent="계산 중";
   document.getElementById("status").textContent="공포탐욕지수 계산 중…";
-
   if(forceReload){ DATA=null; DATA_ERROR=null; DATA_META=null; }
 
   const G=await computeFG();
@@ -1286,11 +1429,12 @@ async function run(forceReload){
   renderMacro(G.macro,T);
 
   RESULTS=[]; let fails=0;
-  for(const t of TICKERS){
+  const ACTIVE = getActiveTickers();
+  for(const t of ACTIVE){
     document.getElementById("status").textContent=`${t.name} 계산 중…`;
     try{
       const { rows, derived } = await loadTicker(t);
-      if(!rows || rows.length<60) throw new Error("데이터 부족");
+      if(!rows || rows.length<60) throw new Error(t.custom ? "데이터 대기 중 (다음 갱신 후 표시됩니다)" : "데이터 부족");
       const shortHist = rows.length < 500;
       const ind={ sto:STO_SET.map(([n,k,d])=>stochSlow(rows,n,k,d)),
         rsi:rsi(rows,14), ma200:sma(rows.map(r=>r.c),200) };
@@ -1329,7 +1473,7 @@ async function run(forceReload){
   const now=new Date();
   document.getElementById("allocDate").textContent =
     now.toLocaleDateString("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit"}) + " 기준";
-  document.getElementById("st-state").textContent = fails?`일부 실패 (${fails}/${TICKERS.length})`:"최신";
+  document.getElementById("st-state").textContent = fails?`일부 실패 (${fails}/${ACTIVE.length})`:"최신";
   document.getElementById("st-time").textContent =
     now.toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
   document.getElementById("st-src").textContent =
@@ -1349,14 +1493,13 @@ async function run(forceReload){
       `<div class="err"><b>data.json을 불러오지 못했습니다.</b><br>
        (${DATA_ERROR})<br><br>
        · GitHub Pages 저장소 루트에 <code>data.json</code>이 있는지 확인하십시오.<br>
-       · 파일을 <code>file://</code>로 직접 열면 브라우저가 로컬 JSON 요청도 막습니다.
+       · <code>file://</code>로 직접 열면 로컬 JSON 요청도 막힙니다.
        반드시 <code>https://사용자명.github.io/저장소명/</code> 주소로 접속하십시오.<br>
        · Actions 탭에서 "데이터 갱신" 워크플로가 성공했는지 확인하십시오.</div>`;
-  } else if(fails===TICKERS.length){
+  } else if(fails===ACTIVE.length){
     document.getElementById("errbox").innerHTML=
       `<div class="err"><b>data.json은 열렸지만 종목 데이터가 비어 있습니다.</b><br>
-       Actions 탭에서 최근 실행 로그를 확인하십시오. 야후 쪽 일시 차단이면
-       다음 자동 실행(하루 3회) 때 복구됩니다. 지금 바로 갱신하려면
+       Actions 탭에서 최근 실행 로그를 확인하십시오. 지금 바로 갱신하려면
        저장소 Actions → "데이터 갱신" → "Run workflow"를 눌러 수동 실행하십시오.</div>`;
   } else if(DATA_META && DATA_META.failed && DATA_META.failed.length){
     document.getElementById("errbox").innerHTML=
@@ -1384,6 +1527,130 @@ window.addEventListener("resize",()=>{
   shown.forEach((d,i)=>{ if(ok[i]) drawSpark(d,ok[i]); });
 });
 
+/* ═══════════ 종목 관리 UI ═══════════ */
+function renderTickerManager(){
+  const hidden = loadHidden();
+  const custom = loadCustomTickers();
+  const list = document.getElementById("tmList");
+
+  const rows = [];
+  DEFAULT_TICKERS.forEach(t=>{
+    const isHidden = hidden.has(t.sym);
+    rows.push(`<div class="tm-item${isHidden?' hidden-item':''}">
+      <span class="ti-sym">${t.sym}</span>
+      <span class="ti-name">${t.name}</span>
+      <span class="ti-grp">${t.group}</span>
+      ${isHidden
+        ? `<button class="restore" data-restore="${t.sym}">복원</button>`
+        : `<button data-remove="${t.sym}">삭제</button>`}
+    </div>`);
+  });
+  custom.forEach(t=>{
+    rows.push(`<div class="tm-item">
+      <span class="ti-sym">${t.sym}</span>
+      <span class="ti-name">${t.name}</span>
+      <span class="ti-grp">${t.group}</span>
+      <span class="ti-tag">사용자</span>
+      <button data-remove="${t.sym}">삭제</button>
+    </div>`);
+  });
+  list.innerHTML = rows.join("");
+
+  list.querySelectorAll("[data-remove]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      removeTicker(btn.dataset.remove);
+      renderTickerManager();
+      run(true);
+    });
+  });
+  list.querySelectorAll("[data-restore]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      restoreDefaultTicker(btn.dataset.restore);
+      renderTickerManager();
+      run(true);
+    });
+  });
+}
+
+function tmShowMsg(text, isOk){
+  const el = document.getElementById("tmMsg");
+  el.textContent = text;
+  el.className = "tm-msg " + (isOk?"ok":"err");
+}
+
+function openTextModal(title, presetText, onConfirm, readOnly){
+  const bg = document.createElement("div");
+  bg.className = "tm-modal-bg";
+  bg.innerHTML = `<div class="tm-modal">
+    <h4>${title}</h4>
+    <textarea id="tmModalText" ${readOnly?"readonly":""}>${presetText||""}</textarea>
+    <div class="tm-modal-btns">
+      <button class="ghost" id="tmModalCancel">닫기</button>
+      ${onConfirm ? '<button id="tmModalOk">적용</button>' : ""}
+    </div>
+  </div>`;
+  document.body.appendChild(bg);
+  const ta = bg.querySelector("#tmModalText");
+  if(readOnly){ ta.focus(); ta.select(); }
+  bg.querySelector("#tmModalCancel").addEventListener("click", ()=>bg.remove());
+  bg.addEventListener("click", e=>{ if(e.target===bg) bg.remove(); });
+  if(onConfirm){
+    bg.querySelector("#tmModalOk").addEventListener("click", ()=>{
+      onConfirm(ta.value);
+      bg.remove();
+    });
+  }
+}
+
+document.getElementById("tmAdd").addEventListener("click", ()=>{
+  const sym = document.getElementById("tmSym").value;
+  const name = document.getElementById("tmName").value;
+  const group = document.getElementById("tmGroup").value;
+  const r = addCustomTicker(sym, name, group);
+  tmShowMsg(r.msg, r.ok);
+  if(r.ok){
+    document.getElementById("tmSym").value = "";
+    document.getElementById("tmName").value = "";
+    renderTickerManager();
+    run(true);
+  }
+});
+document.getElementById("tmSym").addEventListener("keydown", e=>{
+  if(e.key==="Enter") document.getElementById("tmAdd").click();
+});
+
+document.getElementById("tmExport").addEventListener("click", ()=>{
+  const payload = {
+    hidden: [...loadHidden()],
+    custom: loadCustomTickers(),
+  };
+  openTextModal("설정 내보내기 — 아래 텍스트를 복사하십시오", JSON.stringify(payload, null, 2), null, true);
+});
+
+document.getElementById("tmImport").addEventListener("click", ()=>{
+  openTextModal("설정 가져오기 — 내보낸 텍스트를 붙여넣으십시오", "", (text)=>{
+    try{
+      const payload = JSON.parse(text);
+      if(Array.isArray(payload.hidden)) saveHidden(new Set(payload.hidden));
+      if(Array.isArray(payload.custom)) saveCustomTickers(payload.custom);
+      tmShowMsg("가져오기 완료.", true);
+      renderTickerManager();
+      run(true);
+    }catch(e){
+      tmShowMsg("텍스트 형식이 올바르지 않습니다.", false);
+    }
+  });
+});
+
+document.getElementById("tmReset").addEventListener("click", ()=>{
+  if(!confirm("추가한 종목과 삭제 기록을 모두 초기화하고 기본 목록으로 되돌립니다. 계속할까요?")) return;
+  resetAllTickers();
+  tmShowMsg("기본값으로 초기화되었습니다.", true);
+  renderTickerManager();
+  run(true);
+});
+
+renderTickerManager();
 run();
 </script>
 </body>
