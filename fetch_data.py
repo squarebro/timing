@@ -101,29 +101,29 @@ SP500_SEASONALITY_1950 = {
     ],
 }
 
-# 나스닥은 S&P500만큼 검증된 76년 단위 공개 표를 확보하지 못했다.
-# 나스닥100(1985~2025, 41년) 기준으로 공개된 정성적 패턴(11·12월 최고,
-# 1·9월 최저, 2월도 약함)만 확인되었고 연도별 정확한 % 수치는 출처마다
-# 갈린다. 부정확한 숫자를 그럴듯하게 제시하는 것보다, 검증되지 않은
-# 값임을 명시하고 방향성(순위)만 참고용으로 제공하는 편이 낫다고 판단했다.
-NASDAQ_SEASONALITY_APPROX = {
-    "years": "1985–2025 (근사)",
-    "years_n": 41,
-    "source": "정성적 패턴만 확인됨 — 연도별 % 수치 미검증",
-    "verified": False,
+# 나스닥은 QQQ(나스닥100 추종 ETF) 최근 24년 실측 월별 수익률을 사용한다.
+# QQQ는 1999년 상장이라 76년 표본은 원천적으로 불가능하며, 24년이 실무에서
+# 구할 수 있는 가장 긴 검증된 정량 표본이다(Tradewell 세션낼리티 집계,
+# Barchart·Trade That Swing 등 여러 출처의 정성적 패턴과 방향이 일치함:
+# 9월 최저·10월 최고).  S&P500과 동일하게 "avg_return %"를 그대로 쓰므로
+# 화면에서도 같은 방식(0선 기준 막대)으로 표시된다.
+NASDAQ_SEASONALITY_QQQ = {
+    "years": "2001–2025 (QQQ 최근 24개년)",
+    "years_n": 24,
+    "source": "Tradewell QQQ Seasonality (Invesco QQQ Trust 실측 월별 수익률)",
     "months": [
-        {"month": 1,  "rank": 2},   # 승률은 높으나 변동성 큼
-        {"month": 2,  "rank": 11},  # 약세로 자주 언급됨
-        {"month": 3,  "rank": 4},
-        {"month": 4,  "rank": 3},
-        {"month": 5,  "rank": 5},
-        {"month": 6,  "rank": 8},
-        {"month": 7,  "rank": 6},
-        {"month": 8,  "rank": 7},
-        {"month": 9,  "rank": 12},  # 최저 승률권으로 반복 언급
-        {"month": 10, "rank": 9},
-        {"month": 11, "rank": 1},   # 최고 승률월로 반복 언급
-        {"month": 12, "rank": 10},
+        {"month": 1,  "avg_return": 0.6,  "win_rate": 60.9, "rank": 8},
+        {"month": 2,  "avg_return": -0.6, "win_rate": 47.8, "rank": 11},
+        {"month": 3,  "avg_return": 1.3,  "win_rate": 66.7, "rank": 5},
+        {"month": 4,  "avg_return": 1.9,  "win_rate": 62.5, "rank": 4},
+        {"month": 5,  "avg_return": 0.5,  "win_rate": 54.2, "rank": 9},
+        {"month": 6,  "avg_return": 0.4,  "win_rate": 58.3, "rank": 10},
+        {"month": 7,  "avg_return": 2.1,  "win_rate": 70.8, "rank": 3},
+        {"month": 8,  "avg_return": 1.2,  "win_rate": 58.3, "rank": 6},
+        {"month": 9,  "avg_return": -2.2, "win_rate": 45.8, "rank": 12},
+        {"month": 10, "avg_return": 3.4,  "win_rate": 66.7, "rank": 1},
+        {"month": 11, "avg_return": 2.3,  "win_rate": 79.2, "rank": 2},
+        {"month": 12, "avg_return": 0.9,  "win_rate": 56.5, "rank": 7},
     ],
 }
 
@@ -168,10 +168,10 @@ def main():
     print("\n계절성 데이터 (고정값 — 1950년 이후 76년 통계, 매번 동일)")
     print(f"  S&P500  OK  (YCharts/Carson 집계, {SP500_SEASONALITY_1950['years']}, "
           f"{SP500_SEASONALITY_1950['years_n']}개년)")
-    print(f"  나스닥   OK  (정성적 순위만, 수치 미검증 — {NASDAQ_SEASONALITY_APPROX['years']})")
+    print(f"  나스닥   OK  (QQQ 실측 {NASDAQ_SEASONALITY_QQQ['years_n']}개년 — {NASDAQ_SEASONALITY_QQQ['years']})")
     seasonality = {
         "sp500": SP500_SEASONALITY_1950,
-        "nasdaq": NASDAQ_SEASONALITY_APPROX,
+        "nasdaq": NASDAQ_SEASONALITY_QQQ,
     }
 
     payload = {

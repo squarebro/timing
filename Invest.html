@@ -504,7 +504,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
   <span class="lg-c">45점 미만 · 신규 매수 자제</span>
 </div>
 
-<div class="sec"><span class="n">07</span><h2>이번 달 계절성 · 10년 데이터</h2><div class="ln"></div></div>
+<div class="sec"><span class="n">07</span><h2>이번 달 계절성 · 장기 통계</h2><div class="ln"></div></div>
 <div class="season-grid" id="seasonGrid">
   <div class="season-card"><div class="sn-hd"><span class="sn-t">계산 중</span></div></div>
 </div>
@@ -1239,7 +1239,7 @@ function renderSeasonality(){
   const host = document.getElementById("seasonGrid");
   const S = DATA && DATA.seasonality;
 
-  if(!S || !S.sp500){
+  if(!S || !S.sp500 || !S.nasdaq){
     host.innerHTML = `<div class="season-card"><div class="sn-hd">
       <span class="sn-t">데이터 없음</span></div>
       <div style="font-size:12px;color:var(--ink-2)">
@@ -1253,90 +1253,81 @@ function renderSeasonality(){
   const nowMonth = new Date().getMonth() + 1; // 1~12
   const MN = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
   const barColor = ret => ret==null ? "var(--rule)" :
-    ret >= 1.0 ? "var(--jade)" : ret >= 0 ? "#4E8F6B" :
-    ret >= -0.3 ? "var(--amber)" : "var(--rust)";
+    ret >= 1.5 ? "var(--jade)" : ret >= 0 ? "#4E8F6B" :
+    ret >= -0.5 ? "var(--amber)" : "var(--rust)";
 
-  /* ── S&P500 카드: 사진과 동일하게 실제 %를 막대로 표시 ── */
-  const sp = S.sp500;
-  const spCur = sp.months[nowMonth-1];
-  const spCol = barColor(spCur.avg_return);
-  const spDesc =
-    spCur.rank <= 3  ? `1950년 이후 ${sp.years_n}년 중 대체로 최상위권(전체 12개월 중 ${spCur.rank}위) 성과월입니다.` :
-    spCur.rank <= 6  ? `평균보다 다소 좋은 편(${spCur.rank}위)이었습니다.` :
-    spCur.rank <= 9  ? `평균보다 다소 약한 편(${spCur.rank}위)이었습니다.` :
-                        `1950년 이후 대체로 최하위권(${spCur.rank}위) 성과월입니다.`;
+  /* S&P500·나스닥 모두 같은 형식(실제 % 수익률, 0선 기준 막대)이므로
+     카드 하나를 만드는 로직을 공통 함수로 뺀다. 두 데이터셋의 필드명이
+     같은지(avg_return·win_rate·rank·years·years_n·source가 전부 있는지)
+     먼저 확인해, 하나라도 없으면 "undefined"를 그대로 화면에 뿌리는
+     대신 카드 자체를 안내 문구로 대체한다. */
+  function fieldsOk(d){
+    return d && Array.isArray(d.months) && d.months.length===12 &&
+      d.months.every(m => typeof m.avg_return==="number" && typeof m.win_rate==="number"
+        && typeof m.rank==="number") &&
+      typeof d.years==="string" && typeof d.years_n==="number" && typeof d.source==="string";
+  }
 
-  const spBars = sp.months.map((m,i)=>{
-    const isNow = (i+1)===nowMonth;
-    const maxAbs = Math.max(...sp.months.map(x=>Math.abs(x.avg_return)));
-    const halfPct = Math.max(4, Math.abs(m.avg_return)/maxAbs*48); // 0선 기준 최대 48%
-    const isNeg = m.avg_return < 0;
-    const barStyle = isNeg
-      ? `top:50%;height:${halfPct}%;`
-      : `bottom:50%;height:${halfPct}%;`;
-    return `<div class="sn-slot">
-      <div class="sn-bar${isNow?' now':''}" style="${barStyle}background:${barColor(m.avg_return)}"></div>
-      <span class="sn-bar-label">${i+1}</span></div>`;
-  }).join("");
+  function buildCard(label, d){
+    if(!fieldsOk(d)){
+      return `<div class="season-card"><div class="sn-hd"><span class="sn-t">${label}</span></div>
+        <div style="font-size:12px;color:var(--rust)">
+        데이터 형식이 예상과 달라 표시할 수 없습니다. data.json을 최신 버전으로
+        갱신했는지 확인하십시오(Actions → 데이터 갱신 → Run workflow).</div></div>`;
+    }
+    const cur = d.months[nowMonth-1];
+    const col = barColor(cur.avg_return);
+    const desc =
+      cur.rank <= 3  ? `${d.years} 기준 대체로 최상위권(전체 12개월 중 ${cur.rank}위) 성과월입니다.` :
+      cur.rank <= 6  ? `평균보다 다소 좋은 편(${cur.rank}위)이었습니다.` :
+      cur.rank <= 9  ? `평균보다 다소 약한 편(${cur.rank}위)이었습니다.` :
+                        `${d.years} 기준 대체로 최하위권(${cur.rank}위) 성과월입니다.`;
 
-  const spCard = `<div class="season-card">
-    <div class="sn-hd"><span class="sn-t">S&amp;P 500</span>
-      <span class="sn-month">${MN[nowMonth-1]} · ${sp.years}</span></div>
-    <div class="sn-score-row">
-      <div><span class="sn-score" style="color:${spCol}">${spCur.avg_return>=0?'+':''}${spCur.avg_return}%</span>
-        <span class="sn-score-of">평균</span></div>
-      <div class="sn-desc">${spDesc}</div>
-    </div>
-    <div class="sn-bars">${spBars}</div>
-    <div class="sn-stats">
-      <span><span class="k">순위</span><span class="v">${spCur.rank} / 12</span></span>
-      <span><span class="k">플러스 마감 비율</span><span class="v">${spCur.win_rate}%</span></span>
-      <span><span class="k">표본</span><span class="v">${sp.years_n}개년</span></span>
-    </div>
-  </div>`;
-
-  /* ── 나스닥 카드: 수치 미검증이므로 순위(등수)만, 색은 절제된 회색조 ── */
-  const nq = S.nasdaq;
-  let nqCard = "";
-  if(nq){
-    const nqCur = nq.months[nowMonth-1];
-    const nqDesc =
-      nqCur.rank <= 3  ? "역사적으로 강세 경향이 있다고 자주 언급되는 달입니다." :
-      nqCur.rank <= 9  ? "특별히 강하거나 약하다고 언급되지 않는 중간 구간입니다." :
-                          "역사적으로 약세 경향이 있다고 자주 언급되는 달입니다(9월 효과와 유사).";
-    const nqBars = nq.months.map((m,i)=>{
-      const isNow=(i+1)===nowMonth;
-      const h = Math.max(6, (13-m.rank)/12*46);
-      const bc = m.rank<=3 ? "var(--jade)" : m.rank>=10 ? "var(--rust)" : "var(--amber)";
+    const maxAbs = Math.max(...d.months.map(x=>Math.abs(x.avg_return)));
+    const bars = d.months.map((m,i)=>{
+      const isNow = (i+1)===nowMonth;
+      const halfPct = Math.max(4, Math.abs(m.avg_return)/maxAbs*48); // 0선 기준 최대 48%
+      const isNeg = m.avg_return < 0;
+      const barStyle = isNeg ? `top:50%;height:${halfPct}%;` : `bottom:50%;height:${halfPct}%;`;
       return `<div class="sn-slot">
-        <div class="sn-bar${isNow?' now':''}" style="bottom:50%;height:${h}%;background:${bc};opacity:.6"></div>
+        <div class="sn-bar${isNow?' now':''}" style="${barStyle}background:${barColor(m.avg_return)}"></div>
         <span class="sn-bar-label">${i+1}</span></div>`;
     }).join("");
-    nqCard = `<div class="season-card">
-      <div class="sn-hd"><span class="sn-t">나스닥 <span style="font-size:9px;color:var(--rust);font-weight:400">(수치 미검증)</span></span>
-        <span class="sn-month">${MN[nowMonth-1]} · ${nq.years}</span></div>
+
+    return `<div class="season-card">
+      <div class="sn-hd"><span class="sn-t">${label}</span>
+        <span class="sn-month">${MN[nowMonth-1]} · ${d.years}</span></div>
       <div class="sn-score-row">
-        <div><span class="sn-score" style="color:var(--ink-2)">${nqCur.rank}</span>
-          <span class="sn-score-of">/ 12위</span></div>
-        <div class="sn-desc">${nqDesc}</div>
+        <div><span class="sn-score" style="color:${col}">${cur.avg_return>=0?'+':''}${cur.avg_return}%</span>
+          <span class="sn-score-of">평균</span></div>
+        <div class="sn-desc">${desc}</div>
       </div>
-      <div class="sn-bars">${nqBars}</div>
+      <div class="sn-bars">${bars}</div>
       <div class="sn-stats">
-        <span style="color:var(--ink-3)">평균 수익률(%)은 신뢰할 만한 76년 단위 공개 자료를 확보하지 못해
-        표시하지 않습니다. 순위만 정성적 참고용입니다.</span>
+        <span><span class="k">순위</span><span class="v">${cur.rank} / 12</span></span>
+        <span><span class="k">플러스 마감 비율</span><span class="v">${cur.win_rate}%</span></span>
+        <span><span class="k">표본</span><span class="v">${d.years_n}개년</span></span>
       </div>
     </div>`;
   }
 
+  const spCard = buildCard("S&amp;P 500", S.sp500);
+  const nqCard = buildCard("나스닥100 (QQQ)", S.nasdaq);
+
   host.innerHTML = spCard + nqCard;
+
+  const spOk = fieldsOk(S.sp500), nqOk = fieldsOk(S.nasdaq);
   document.getElementById("seasonNote").innerHTML =
-    `<b>S&amp;P500 수치는 1950~2025년 76년간의 실제 월평균 수익률입니다</b>
-     (출처: ${sp.source}). 10년 자체 계산이 아닌 검증된 장기 통계이므로
-     조회할 때마다 같은 숫자가 나옵니다 — 이는 버그가 아니라 의도된 동작입니다.<br>
-     나스닥은 신뢰할 수 있는 장기 % 데이터를 확보하지 못해 정성적 순위만 참고용으로 표시했습니다.<br>
-     <b>이는 76년 평균이며 특정 연도의 결과를 예측하지 않습니다.</b> 2020년 9월처럼 평균과 반대로
-     움직인 해도 다수 있었습니다. 매매 시점을 이 통계 하나로 정하지 마십시오.`;
+    (spOk ? `<b>S&amp;P500은 ${S.sp500.years} 실제 월평균 수익률입니다</b> (출처: ${S.sp500.source}).` : "") +
+    (nqOk ? ` <b>나스닥100은 QQQ(ETF) 기준 ${S.nasdaq.years} 실제 월평균 수익률입니다</b>
+      (출처: ${S.nasdaq.source}).` : "") +
+    ` 둘 다 표본 기간이 짧아지지 않는 고정 통계이므로 조회할 때마다 같은 숫자가
+    나옵니다 — 이는 버그가 아니라 의도된 동작입니다.<br>
+    <b>과거 평균이며 특정 연도의 결과를 예측하지 않습니다.</b> 2020년 9월처럼 평균과
+    반대로 움직인 해도 다수 있었습니다. 매매 시점을 이 통계 하나로 정하지 마십시오.`;
 }
+
+
 
 
 function renderCashPanel(){
