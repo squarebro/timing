@@ -4,9 +4,11 @@ on:
   schedule:
     # 한국시간 기준 07:15, 15:15, 23:15 (UTC 22:15 전날, 06:15, 14:15)
     # cron은 UTC 기준. 하루 3번이면 장 시작 전/후 데이터가 어느 정도 신선하게 유지됨.
-    - cron: "15 22 * * *"
-    - cron: "15 6  * * *"
-    - cron: "15 14 * * *"
+    - cron: "0 0 * * *"
+    - cron: "0 3 * * *"
+    - cron: "0 5 * * *"
+    - cron: "0 7 * * *"
+    - cron: "0 13 * * *"
   workflow_dispatch: {}   # Actions 탭에서 수동 실행 버튼도 쓸 수 있게
 
 permissions:
