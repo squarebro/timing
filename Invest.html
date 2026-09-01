@@ -121,23 +121,29 @@ body{
 .tier-high{background:rgba(158,53,36,.12);color:var(--rust)}
 
 /* ── SUMMARY BOARD ── */
-.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));
+.board{display:grid;grid-template-columns:repeat(6,1fr);
   gap:1px;background:var(--rule);border:1px solid var(--rule)}
-.bcard{background:var(--card);padding:11px 11px 9px;position:relative;
-  display:flex;flex-direction:column;gap:6px;min-height:136px}
+@media(max-width:1000px){.board{grid-template-columns:repeat(5,1fr)}}
+@media(max-width:820px){.board{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:640px){.board{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:420px){.board{grid-template-columns:repeat(2,1fr)}}
+.bcard{background:var(--card);padding:10px 10px 8px;position:relative;
+  display:flex;flex-direction:column;gap:5px;min-height:128px}
 .bcard.dim{opacity:.45}
+.bcard.grp-start{box-shadow:inset 3px 0 0 var(--clay)}
 .bcard .bt{display:flex;justify-content:space-between;align-items:baseline;gap:5px}
-.bcard .bn{font-family:'IBM Plex Sans Condensed',sans-serif;font-size:12.5px;
+.bcard .bn{font-family:'IBM Plex Sans Condensed',sans-serif;font-size:12px;
   font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bcard .bg{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.09em;
-  color:var(--ink-3);text-transform:uppercase;white-space:nowrap}
+.bcard .bg{font-family:'IBM Plex Mono',monospace;font-size:7.5px;letter-spacing:.08em;
+  color:var(--ink-3);text-transform:uppercase;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;opacity:.75}
 .bcard .bs{display:flex;align-items:baseline;gap:6px}
-.bcard .bv{font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:700;
+.bcard .bv{font-family:'IBM Plex Mono',monospace;font-size:27px;font-weight:700;
   line-height:.85;letter-spacing:-.04em}
-.bcard .bd{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600}
-.bcard .wj-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;margin-top:2px}
-.bcard canvas{width:100%;height:28px;display:block;margin-top:auto}
-.bcard .bl{font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--ink-3);
+.bcard .bd{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600}
+.bcard .wj-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:8.5px;font-weight:700;padding:1px 5px;border-radius:2px;margin-top:1px}
+.bcard canvas{width:100%;height:26px;display:block;margin-top:auto}
+.bcard .bl{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--ink-3);
   display:flex;justify-content:space-between}
 .board-note{font-size:11px;color:var(--ink-3);margin-top:8px;line-height:1.65}
 
@@ -170,12 +176,6 @@ body{
   text-transform:uppercase;color:var(--ink-3)}
 .grp .gl{flex:1;height:1px;background:var(--rule)}
 
-.board-grp{grid-column:1 / -1;display:flex;align-items:center;gap:9px;margin:12px 0 1px}
-.board-grp:first-child{margin-top:0}
-.board-grp span{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
-.board-grp .board-gl{flex:1;height:1px;background:var(--rule)}
-
 /* ── FEAR & GREED DIALS ── */
 .fg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
 .fg{background:var(--card);border:1px solid var(--rule);padding:15px 15px 13px;box-shadow:var(--shadow)}
@@ -191,8 +191,8 @@ body{
 .fg .mood .m2{font-size:11px;color:var(--ink-2);margin-top:3px;line-height:1.5}
 .fg .scale{position:relative;height:26px;margin-top:12px}
 .fg .scale .bar{position:absolute;top:6px;left:0;right:0;height:5px;border-radius:3px;
-  background:linear-gradient(90deg,#9E3524 0%,#C86A2E 24%,#9C7414 45%,
-    #4E8F6B 62%,#1B6E52 78%,#0F4F3C 100%);opacity:.32}
+  background:linear-gradient(90deg,#0F4F3C 0%,#1B6E52 24%,#9C7414 45%,
+    #C86A2E 62%,#9E3524 78%,#7A281A 100%);opacity:.32}
 .fg .scale .pin{position:absolute;top:1px;width:3px;height:15px;background:var(--ink);
   border-radius:1px;transition:left .8s cubic-bezier(.4,0,.2,1)}
 .fg .scale .lab{position:absolute;top:17px;left:0;right:0;display:flex;
@@ -314,6 +314,18 @@ button:disabled{opacity:.4;cursor:not-allowed}
   font-size:12.5px;line-height:1.75;margin-top:12px}
 .err code{font-family:'IBM Plex Mono',monospace;background:var(--paper);padding:1px 5px}
 /* ── TICKER MANAGER ── */
+.tm-collapsed{border:1px solid var(--rule);background:var(--card);margin-top:8px}
+.tm-collapsed summary{
+  padding:10px 14px;cursor:pointer;list-style:none;
+  font-family:'IBM Plex Sans Condensed',sans-serif;font-size:12.5px;font-weight:600;
+  color:var(--ink-2);display:flex;align-items:center;gap:7px;user-select:none}
+.tm-collapsed summary::-webkit-details-marker{display:none}
+.tm-collapsed summary::before{content:'▸';font-size:10px;color:var(--ink-3);
+  transition:transform .15s}
+.tm-collapsed[open] summary::before{transform:rotate(90deg)}
+.tm-collapsed[open] summary{border-bottom:1px solid var(--rule)}
+.tm-collapsed .ticker-mgr{border:none;box-shadow:none;padding:12px 14px}
+
 .ticker-mgr{background:var(--card);border:1px solid var(--rule);box-shadow:var(--shadow);padding:14px}
 .tm-form{display:grid;grid-template-columns:1.3fr 1.1fr 1fr auto;gap:8px}
 @media(max-width:700px){.tm-form{grid-template-columns:1fr 1fr}}
@@ -471,41 +483,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 <div class="macro" id="macro"></div>
 <div class="macro-note" id="macroNote">불러오는 중입니다.</div>
 
-<div class="sec"><span class="n">06</span><h2>종목 관리</h2><div class="ln"></div></div>
-<div class="ticker-mgr">
-  <div class="tm-form">
-    <input id="tmSym" type="text" placeholder="심볼 (예: TSLA, 373220.KS, ETH-USD)" maxlength="20">
-    <input id="tmName" type="text" placeholder="표시 이름 (비우면 심볼 그대로)" maxlength="20">
-    <select id="tmGroup">
-      <option value="한국 주식">한국 주식</option>
-      <option value="미국 주식">미국 주식</option>
-      <option value="미국 ETF">미국 ETF</option>
-      <option value="통화">통화</option>
-      <option value="실물">실물</option>
-      <option value="디지털자산">디지털자산</option>
-      <option value="사용자 추가">기타</option>
-    </select>
-    <button id="tmAdd">추가</button>
-  </div>
-  <div class="tm-msg" id="tmMsg"></div>
-  <div class="tm-list" id="tmList"></div>
-  <div class="tm-actions">
-    <button class="ghost small" id="tmExport">설정 내보내기</button>
-    <button class="ghost small" id="tmImport">가져오기</button>
-    <button class="ghost small" id="tmReset">기본값으로 초기화</button>
-  </div>
-  <div class="tm-note">
-    이 목록은 <b>이 브라우저에만</b> 저장됩니다. 다른 기기에서 같은 목록을 쓰려면
-    "설정 내보내기"로 나온 텍스트를 복사해 다른 기기의 "가져오기"에 붙여넣으십시오.<br>
-    새로 추가한 심볼은 <b>다음 데이터 갱신(하루 5회 자동, 또는 Actions에서 수동 실행) 이후</b>부터
-    점수가 표시됩니다. 추가 직후에는 "데이터 대기 중"으로 보이는 게 정상입니다.<br>
-    심볼 표기: 한국 종목은 <code>.KS</code>(코스피)·<code>.KQ</code>(코스닥)를 붙이고
-    (예: <code>005930.KS</code>), 미국은 티커 그대로, 코인은 <code>BTC-USD</code> 형식,
-    환율은 <code>JPY=X</code> 형식입니다.
-  </div>
-</div>
-
-<div class="sec"><span class="n">07</span><h2>종목별 매수 적합도 &amp; 웅줍 포인트</h2><div class="ln"></div></div>
+<div class="sec"><span class="n">06</span><h2>종목별 매수 적합도 &amp; 웅줍 포인트</h2><div class="ln"></div></div>
 <div class="rows" id="rows"></div>
 
 <div class="controls">
@@ -522,11 +500,44 @@ button:disabled{opacity:.4;cursor:not-allowed}
   <span class="lg-c">45점 미만 · 신규 매수 자제</span>
 </div>
 
-<div class="sec"><span class="n">08</span><h2>이번 달 계절성 · 10년 데이터</h2><div class="ln"></div></div>
+<div class="sec"><span class="n">07</span><h2>이번 달 계절성 · 10년 데이터</h2><div class="ln"></div></div>
 <div class="season-grid" id="seasonGrid">
   <div class="season-card"><div class="sn-hd"><span class="sn-t">계산 중</span></div></div>
 </div>
 <div class="season-note" id="seasonNote">계절성 데이터를 불러오는 중입니다.</div>
+
+<details class="tm-collapsed" id="tmCollapsed">
+  <summary>종목 추가·삭제 관리</summary>
+  <div class="ticker-mgr">
+    <div class="tm-form">
+      <input id="tmSym" type="text" placeholder="심볼 (TSLA / 373220.KS / ETH-USD)" maxlength="20">
+      <input id="tmName" type="text" placeholder="이름 (선택)" maxlength="20">
+      <select id="tmGroup">
+        <option value="한국 주식">한국 주식</option>
+        <option value="미국 주식">미국 주식</option>
+        <option value="미국 ETF">미국 ETF</option>
+        <option value="통화">통화</option>
+        <option value="실물">실물</option>
+        <option value="디지털자산">디지털자산</option>
+        <option value="사용자 추가">기타</option>
+      </select>
+      <button id="tmAdd">추가</button>
+    </div>
+    <div class="tm-msg" id="tmMsg"></div>
+    <div class="tm-list" id="tmList"></div>
+    <div class="tm-actions">
+      <button class="ghost small" id="tmExport">내보내기</button>
+      <button class="ghost small" id="tmImport">가져오기</button>
+      <button class="ghost small" id="tmReset">초기화</button>
+    </div>
+    <div class="tm-note">
+      이 목록은 이 브라우저에만 저장됩니다. 다른 기기에 옮기려면 내보내기 → 가져오기를 쓰십시오.
+      새로 추가한 심볼은 즉시 조회를 시도하지만, 실패하면 다음 데이터 갱신 후 반영됩니다.
+      한국 종목은 <code>.KS</code>/<code>.KQ</code>, 코인은 <code>BTC-USD</code>,
+      환율은 <code>JPY=X</code> 형식입니다.
+    </div>
+  </div>
+</details>
 
 <div class="foot">
   <b>점수 산식 (100점)</b> — 스토캐스틱 5/10/20 종합 32 · 3년 가격 위치 16 · RSI(14) 10 ·
@@ -1399,7 +1410,9 @@ const verdict=s=>s>=80?{t:"적극 매수 구간",s:"BUY · STRONG"}:
   s>=45?{t:"관망 · 적립 유지",s:"NEUTRAL"}:
   s>=30?{t:"신규 매수 자제",s:"CAUTION"}:{t:"차익 실현 고려",s:"OVERHEATED"};
 
-const fgColor=v=>v<25?"var(--rust)":v<45?"#C86A2E":v<55?"var(--amber)":v<75?"#4E8F6B":"var(--jade)";
+/* 요청에 따라 일반적인 관례(공포=빨강)와 반대로 배색한다:
+   공포(낮은 값)일수록 녹색, 탐욕(높은 값)일수록 빨간색으로 표시한다. */
+const fgColor=v=>v<25?"var(--jade)":v<45?"#4E8F6B":v<55?"var(--amber)":v<75?"#C86A2E":"var(--rust)";
 const fgMood=v=>v<25?["극단적 공포","패닉 구간. 역발상 분할 매수를 검토할 시점입니다."]:
   v<45?["공포","심리가 위축된 상태. 중장기 매수 기회를 탐색합니다."]:
   v<55?["중립","방향성 탐색 구간. 기존 포지션을 유지합니다."]:
@@ -1526,18 +1539,17 @@ function renderBoard(){
   host.innerHTML="";
   let lastGroup=null;
   sortByGroup(RESULTS).forEach(R=>{
-    if(R.group !== lastGroup){
-      lastGroup = R.group;
-      const g=document.createElement("div");
-      g.className="board-grp";
-      g.innerHTML=`<span>${R.group}</span><div class="board-gl"></div>`;
-      host.appendChild(g);
-    }
+    const isNewGroup = R.group !== lastGroup;
+    lastGroup = R.group;
+
     const el=document.createElement("div");
     el.className="bcard";
+    if(isNewGroup) el.classList.add("grp-start");
+
     if(R.error){
       el.classList.add("dim");
-      el.innerHTML=`<div class="bt"><span class="bn">${R.short||R.name}</span></div>
+      el.innerHTML=`<div class="bt"><span class="bg">${R.group}</span></div>
+        <div class="bt"><span class="bn">${R.short||R.name}</span></div>
         <div class="bs"><span class="bv" style="color:var(--ink-3)">—</span></div>
         <div class="bl"><span>불러오지 못함</span></div>`;
       host.appendChild(el); return;
@@ -1550,6 +1562,7 @@ function renderBoard(){
     const wjTxt = wj.level > 0 ? `${wj.level}차 웅줍` : "웅줍 없음";
 
     el.innerHTML=`
+      <div class="bt"><span class="bg">${R.group}</span></div>
       <div class="bt"><span class="bn">${R.short||R.name}</span></div>
       <div class="bs"><span class="bv" style="color:${col}">${s}</span>
         <span class="bd" style="color:${dCol}">${dTxt}</span></div>
@@ -1563,6 +1576,7 @@ function renderBoard(){
   const ok=RESULTS.filter(r=>!r.error);
   const wjOn=ok.filter(r=>r.woongJoop.level>0);
   document.getElementById("boardNote").innerHTML =
+    `왼쪽에 굵은 선이 있는 칸은 새 자산군의 시작입니다(각 카드 상단 작은 글씨가 자산군 이름). ` +
     `점선은 65점 기준선입니다. 숫자 옆 화살표는 5거래일 전 대비 변화입니다. ` +
     `현재 ${ok.length}개 종목 중 <b>${wjOn.length}개 종목</b>이 웅줍 구간(20/60/120/240일선 이하)에 도달해 있습니다.`;
 }
