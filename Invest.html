@@ -58,6 +58,35 @@ body{
 
 /* ── ALLOCATION ── */
 .sec .alloc-date{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-3)}
+/* ── CASH PANEL ── */
+.cash-panel{background:var(--card);border:1px solid var(--rule);box-shadow:var(--shadow);
+  padding:18px 18px 14px;display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.cash-gauge{flex:1 1 260px;min-width:220px}
+.cash-track{height:10px;border-radius:5px;overflow:hidden;background:var(--paper-2);
+  border:1px solid var(--rule);position:relative}
+.cash-fill{height:100%;border-radius:5px 0 0 5px;background:linear-gradient(90deg,var(--cobalt),var(--jade));
+  transition:width .8s cubic-bezier(.4,0,.2,1);width:0%}
+.cash-labels{display:flex;justify-content:space-between;margin-top:5px;
+  font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--ink-3)}
+.cash-readout{flex:0 0 auto;text-align:center;padding:0 10px;border-left:1px solid var(--rule);
+  border-right:1px solid var(--rule)}
+.cash-pct{font-family:'IBM Plex Mono',monospace;font-size:38px;font-weight:700;
+  color:var(--cobalt);line-height:1}
+.cash-sub{font-size:10.5px;color:var(--ink-3);margin-top:3px;max-width:120px}
+.cash-modes{flex:1 1 200px;display:flex;flex-direction:column;gap:5px;min-width:180px}
+.cash-mode-row{display:flex;justify-content:space-between;font-size:11.5px;
+  padding:3px 0;border-bottom:1px dotted var(--rule)}
+.cash-mode-row:last-child{border-bottom:none}
+.cash-mode-row .cm-label{color:var(--ink-2)}
+.cash-mode-row .cm-val{font-family:'IBM Plex Mono',monospace;font-weight:600}
+.cash-note{font-size:11px;line-height:1.75;color:var(--ink-3);margin-top:9px}
+.cash-note b{color:var(--ink-2)}
+@media(max-width:640px){
+  .cash-panel{flex-direction:column;align-items:stretch}
+  .cash-readout{border-left:none;border-right:none;border-top:1px dotted var(--rule);
+    border-bottom:1px dotted var(--rule);padding:10px 0}
+}
+
 .alloc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media(max-width:760px){.alloc-grid{grid-template-columns:1fr}}
 .alloc-card{background:var(--card);border:1px solid var(--rule);box-shadow:var(--shadow);
@@ -140,6 +169,12 @@ body{
 .grp span{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;
   text-transform:uppercase;color:var(--ink-3)}
 .grp .gl{flex:1;height:1px;background:var(--rule)}
+
+.board-grp{grid-column:1 / -1;display:flex;align-items:center;gap:9px;margin:12px 0 1px}
+.board-grp:first-child{margin-top:0}
+.board-grp span{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.board-grp .board-gl{flex:1;height:1px;background:var(--rule)}
 
 /* ── FEAR & GREED DIALS ── */
 .fg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
@@ -320,6 +355,29 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .tm-modal .tm-modal-btns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
 .tm-modal .tm-modal-btns button{padding:8px 16px;font-size:12.5px}
 
+.season-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:640px){.season-grid{grid-template-columns:1fr}}
+.season-card{background:var(--card);border:1px solid var(--rule);box-shadow:var(--shadow);padding:16px}
+.sn-hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.sn-t{font-family:'IBM Plex Sans Condensed',sans-serif;font-size:15px;font-weight:700}
+.sn-month{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-3)}
+.sn-score-row{display:flex;align-items:baseline;gap:14px;margin-bottom:14px}
+.sn-score{font-family:'IBM Plex Mono',monospace;font-size:44px;font-weight:700;line-height:.85}
+.sn-score-of{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-3)}
+.sn-desc{flex:1;font-size:12px;color:var(--ink-2);line-height:1.55}
+.sn-bars{display:flex;align-items:flex-end;gap:2px;height:56px;margin-bottom:8px}
+.sn-bar{flex:1;background:var(--rule);border-radius:2px 2px 0 0;position:relative;
+  transition:height .6s cubic-bezier(.4,0,.2,1)}
+.sn-bar.now{outline:2px solid var(--ink);outline-offset:1px}
+.sn-bar-label{position:absolute;bottom:-16px;left:0;right:0;text-align:center;
+  font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--ink-3)}
+.sn-stats{display:flex;justify-content:space-between;margin-top:20px;
+  padding-top:9px;border-top:1px dotted var(--rule);font-size:11px}
+.sn-stats .k{color:var(--ink-3)}
+.sn-stats .v{font-family:'IBM Plex Mono',monospace;font-weight:600;margin-left:4px}
+.season-note{font-size:11px;line-height:1.75;color:var(--ink-3);margin-top:10px}
+.season-note b{color:var(--ink-2)}
+
 .foot{margin-top:34px;padding-top:15px;border-top:1px solid var(--rule);
   font-size:11px;line-height:1.85;color:var(--ink-3)}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;
@@ -344,18 +402,32 @@ button:disabled{opacity:.4;cursor:not-allowed}
 </header>
 <div class="rule-thin"></div>
 
-<div class="sec"><span class="n">00</span><h2>오늘 1,000만원을 넣는다면</h2><div class="ln"></div>
+<div class="sec"><span class="n">00</span><h2>지금 현금으로 얼마나 들고 있을까</h2><div class="ln"></div></div>
+<div class="cash-panel" id="cashPanel">
+  <div class="cash-gauge">
+    <div class="cash-track"><div class="cash-fill" id="cashFillBar"></div></div>
+    <div class="cash-labels"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+  </div>
+  <div class="cash-readout">
+    <div class="cash-pct" id="cashPct">계산 중</div>
+    <div class="cash-sub" id="cashSub">전체 자산 중 현금 비중 권장치</div>
+  </div>
+  <div class="cash-modes" id="cashModes"></div>
+</div>
+<div class="cash-note" id="cashNote">종목 점수를 계산한 뒤 산출됩니다.</div>
+
+<div class="sec"><span class="n">01</span><h2>오늘 1,000만원을 넣는다면</h2><div class="ln"></div>
   <span class="alloc-date" id="allocDate">—</span></div>
 <div class="alloc-grid" id="allocGrid">
   <div class="alloc-card"><div class="ac-hd"><span class="ac-t">계산 중</span></div></div>
 </div>
 <div class="alloc-note" id="allocNote">종목 점수를 계산한 뒤 배분안을 만듭니다.</div>
 
-<div class="sec"><span class="n">01</span><h2>한눈에 보기 · 점수 및 웅줍 상태</h2><div class="ln"></div></div>
+<div class="sec"><span class="n">02</span><h2>한눈에 보기 · 점수 및 웅줍 상태</h2><div class="ln"></div></div>
 <div class="board" id="board"></div>
 <div class="board-note" id="boardNote">계산 중입니다.</div>
 
-<div class="sec"><span class="n">02</span><h2>점수대별 대응 &amp; 웅줍 매매 규칙</h2><div class="ln"></div></div>
+<div class="sec"><span class="n">03</span><h2>점수대별 대응 &amp; 웅줍 매매 규칙</h2><div class="ln"></div></div>
 <div class="guide">
   <div class="g-row" data-band="a">
     <div class="g-score">80–100</div>
@@ -391,15 +463,15 @@ button:disabled{opacity:.4;cursor:not-allowed}
   · <b>4차 웅줍 (240일선 이하)</b>: 대폭락장/강력 매수 구간. 잔여 현금 집행
 </div>
 
-<div class="sec"><span class="n">03</span><h2>공포탐욕지수</h2><div class="ln"></div>
+<div class="sec"><span class="n">04</span><h2>공포탐욕지수</h2><div class="ln"></div>
   <a href="https://feargreed.co.kr/" target="_blank" rel="noopener">feargreed.co.kr 교차확인 ↗</a></div>
 <div class="fg-grid" id="fgGrid"></div>
 
-<div class="sec"><span class="n">04</span><h2>매크로 컨디션</h2><div class="ln"></div></div>
+<div class="sec"><span class="n">05</span><h2>매크로 컨디션</h2><div class="ln"></div></div>
 <div class="macro" id="macro"></div>
 <div class="macro-note" id="macroNote">불러오는 중입니다.</div>
 
-<div class="sec"><span class="n">05</span><h2>종목 관리</h2><div class="ln"></div></div>
+<div class="sec"><span class="n">06</span><h2>종목 관리</h2><div class="ln"></div></div>
 <div class="ticker-mgr">
   <div class="tm-form">
     <input id="tmSym" type="text" placeholder="심볼 (예: TSLA, 373220.KS, ETH-USD)" maxlength="20">
@@ -433,7 +505,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
   </div>
 </div>
 
-<div class="sec"><span class="n">06</span><h2>종목별 매수 적합도 &amp; 웅줍 포인트</h2><div class="ln"></div></div>
+<div class="sec"><span class="n">07</span><h2>종목별 매수 적합도 &amp; 웅줍 포인트</h2><div class="ln"></div></div>
 <div class="rows" id="rows"></div>
 
 <div class="controls">
@@ -449,6 +521,12 @@ button:disabled{opacity:.4;cursor:not-allowed}
   <span class="lg-b">45–64점 · 관망</span>
   <span class="lg-c">45점 미만 · 신규 매수 자제</span>
 </div>
+
+<div class="sec"><span class="n">08</span><h2>이번 달 계절성 · 10년 데이터</h2><div class="ln"></div></div>
+<div class="season-grid" id="seasonGrid">
+  <div class="season-card"><div class="sn-hd"><span class="sn-t">계산 중</span></div></div>
+</div>
+<div class="season-note" id="seasonNote">계절성 데이터를 불러오는 중입니다.</div>
 
 <div class="foot">
   <b>점수 산식 (100점)</b> — 스토캐스틱 5/10/20 종합 32 · 3년 가격 위치 16 · RSI(14) 10 ·
@@ -1131,6 +1209,131 @@ function buildAllocation(mode){
 
 const won = v => "₩" + v.toLocaleString("ko-KR");
 
+/* ═══════════ 현금 비중 패널 ═══════════
+   공격형·안정형 배분안이 각각 산출한 현금 비중을 그대로 가져와 보여준다.
+   별도의 새 산식을 만들지 않고 기존 buildAllocation 로직을 재사용하므로,
+   위쪽 배분 카드와 항상 일관된 숫자가 나온다. */
+/* ═══════════ 계절성 (S&P500·나스닥 10년) ═══════════
+   month.avg_rank는 1(그해 최고 성과월)~12(그해 최저 성과월) 평균 순위다.
+   "1~12점, 높을수록 좋다"는 요청에 맞춰 13-avg_rank로 뒤집어 표시한다.
+   즉 avg_rank=1(최고 성과월) → 12점, avg_rank=12(최저 성과월) → 1점. */
+function renderSeasonality(){
+  const host = document.getElementById("seasonGrid");
+  const S = DATA && DATA.seasonality;
+
+  if(!S || (!S.sp500 && !S.nasdaq)){
+    host.innerHTML = `<div class="season-card"><div class="sn-hd">
+      <span class="sn-t">데이터 없음</span></div>
+      <div style="font-size:12px;color:var(--ink-2)">
+      data.json에 계절성 데이터가 아직 없습니다. 다음 데이터 갱신을 기다리거나
+      Actions에서 수동 실행하십시오.</div></div>`;
+    document.getElementById("seasonNote").textContent = "";
+    return;
+  }
+
+  const nowMonth = new Date().getMonth() + 1; // 1~12
+  const MN = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+
+  const cards = [
+    { key:"sp500",  flag:"S&P 500" },
+    { key:"nasdaq", flag:"나스닥 종합" },
+  ].map(c=>{
+    const d = S[c.key];
+    if(!d) return `<div class="season-card"><div class="sn-hd"><span class="sn-t">${c.flag}</span></div>
+      <div style="font-size:12px;color:var(--ink-3)">데이터 없음</div></div>`;
+
+    const cur = d.months[nowMonth-1];
+    const score = cur.avg_rank==null ? null : Math.round((13 - cur.avg_rank)*10)/10;
+    const col = score==null ? "var(--ink-3)" : score>=8 ? "var(--jade)" : score>=5 ? "var(--amber)" : "var(--rust)";
+    const desc = score==null ? "표본 부족" :
+      score>=9  ? "10년 중 이맘때가 대체로 최상위권 성과월이었습니다." :
+      score>=7  ? "평균보다 성과가 좋았던 달에 속합니다." :
+      score>=5  ? "특별히 좋지도 나쁘지도 않은 중간 정도였습니다." :
+      score>=3  ? "평균보다 성과가 약했던 달에 속합니다." :
+                  "10년 중 이맘때가 대체로 최하위권 성과월이었습니다.";
+
+    const bars = d.months.map((m,i)=>{
+      const isNow = (i+1)===nowMonth;
+      const h = m.avg_rank==null ? 4 : Math.max(4, (13-m.avg_rank)/12*100);
+      const bc = m.avg_rank==null ? "var(--rule)" :
+        (13-m.avg_rank)>=8 ? "var(--jade)" : (13-m.avg_rank)>=5 ? "var(--amber)" : "var(--rust)";
+      return `<div class="sn-bar${isNow?' now':''}" style="height:${h}%;background:${bc}">
+        <span class="sn-bar-label">${i+1}</span></div>`;
+    }).join("");
+
+    return `<div class="season-card">
+      <div class="sn-hd"><span class="sn-t">${c.flag}</span>
+        <span class="sn-month">${MN[nowMonth-1]} · 최근 ${d.years_used}개년</span></div>
+      <div class="sn-score-row">
+        <div><span class="sn-score" style="color:${col}">${score==null?"—":score}</span>
+          <span class="sn-score-of">/ 12</span></div>
+        <div class="sn-desc">${desc}</div>
+      </div>
+      <div class="sn-bars">${bars}</div>
+      <div class="sn-stats">
+        <span><span class="k">평균 등락률</span><span class="v">${cur.avg_return==null?"—":(cur.avg_return>=0?"+":"")+cur.avg_return+"%"}</span></span>
+        <span><span class="k">플러스 마감 비율</span><span class="v">${cur.win_rate==null?"—":cur.win_rate+"%"}</span></span>
+        <span><span class="k">표본</span><span class="v">${cur.n_years}개년</span></span>
+      </div>
+    </div>`;
+  });
+
+  host.innerHTML = cards.join("");
+  document.getElementById("seasonNote").innerHTML =
+    `점수는 "그해 12개월 중 이 달이 몇 등이었는가"의 10년 평균 순위를 12점 만점으로 뒤집은 값입니다
+     (1등 달 → 12점, 12등 달 → 1점). 막대그래프의 굵은 테두리가 현재 월입니다.<br>
+     <b>표본이 연 10개뿐이라 통계적으로 약합니다.</b> 특정 달이 우연히 몇 년 연속 좋았거나 나빴을
+     가능성을 배제할 수 없고, 앞으로도 같은 패턴이 반복된다는 보장은 전혀 없습니다.
+     매매 시점을 이 점수 하나로 정하지 마십시오.`;
+}
+
+function renderCashPanel(){
+  const A_aggr = buildAllocation("aggressive");
+  const A_safe = buildAllocation("safe");
+  const balanced = (A_aggr.cashPct + A_safe.cashPct) / 2;
+
+  document.getElementById("cashFillBar").style.width = clamp(balanced,0,100)+"%";
+  document.getElementById("cashPct").textContent = balanced.toFixed(0)+"%";
+
+  const ok = RESULTS.filter(r=>!r.error && r.score);
+  const avgScore = ok.length ? ok.reduce((s,r)=>s+r.score.total,0)/ok.length : null;
+  const bothEmpty = A_aggr.empty && A_safe.empty;
+
+  document.getElementById("cashSub").textContent =
+    bothEmpty ? "매수 기준 충족 종목 없음" :
+    avgScore==null ? "데이터 부족" :
+    avgScore>=60 ? "저가 매력 높음 · 현금 축소 국면" :
+    avgScore>=45 ? "중립 국면" : "고평가 국면 · 현금 확대 권장";
+
+  document.getElementById("cashModes").innerHTML = `
+    <div class="cash-mode-row"><span class="cm-label">공격형 기준</span>
+      <span class="cm-val" style="color:var(--rust)">${A_aggr.cashPct.toFixed(0)}%</span></div>
+    <div class="cash-mode-row"><span class="cm-label">균형(평균)</span>
+      <span class="cm-val" style="color:var(--cobalt)">${balanced.toFixed(0)}%</span></div>
+    <div class="cash-mode-row"><span class="cm-label">안정형 기준</span>
+      <span class="cm-val" style="color:var(--jade)">${A_safe.cashPct.toFixed(0)}%</span></div>
+  `;
+
+  if(bothEmpty){
+    /* 두 전략 모두 기준선(50점/55점)을 넘는 종목이 하나도 없는 극단적 상황.
+       "그냥 100%"라고만 하면 왜 그런지 알 수 없으니 이유를 밝힌다. */
+    document.getElementById("cashNote").innerHTML =
+      `<b>현재 공격형(50점)·안정형(55점) 기준을 넘는 종목이 하나도 없어 100%로 계산되었습니다.</b>
+       종목 평균 점수가 <b>${avgScore==null?"—":avgScore.toFixed(0)+"점"}</b>으로 낮은 상태입니다.
+       이는 전반적으로 고평가 국면이라는 뜻일 수도 있고, 데이터 자체가 일시적으로
+       왜곡되었을 수도 있습니다(개별 종목 상세를 펼쳐 근거를 확인하십시오).<br>
+       <b>이건 위험 관리를 위한 참고 수치이지, 정답이 아닙니다.</b> 소득·나이·투자 목적에 따라
+       감내 가능한 현금 비중은 사람마다 다릅니다.`;
+  }else{
+    document.getElementById("cashNote").innerHTML =
+      `현재 종목 평균 점수 <b>${avgScore==null?"—":avgScore.toFixed(0)+"점"}</b>을 기준으로,
+       아래 "오늘 1,000만원을 넣는다면" 카드와 같은 산식으로 계산했습니다.
+       점수가 높을수록(저평가 신호가 많을수록) 현금 비중은 낮게, 낮을수록 현금 비중은 높게 나옵니다.<br>
+       <b>이건 위험 관리를 위한 참고 수치이지, 정답이 아닙니다.</b> 소득·나이·투자 목적에 따라
+       감내 가능한 현금 비중은 사람마다 다릅니다.`;
+  }
+}
+
 function renderAllocation(){
   const host = document.getElementById("allocGrid");
   const cards = ["aggressive","safe"].map(mode => {
@@ -1303,10 +1506,33 @@ function miniSpark(cv, hist, col){
   g.fillStyle=col; g.fill();
 }
 
+/* 화면에 노출할 그룹 순서를 고정한다. 사용자가 종목을 추가/삭제해도
+   이 순서는 흔들리지 않는다. 목록에 없는 그룹(사용자가 "기타"로 추가한 경우 등)은 맨 뒤로 간다. */
+const GROUP_ORDER = ["통화","실물","디지털자산","한국 주식","미국 주식","미국 ETF"];
+function groupRank(g){
+  const i = GROUP_ORDER.indexOf(g);
+  return i === -1 ? GROUP_ORDER.length : i;
+}
+function sortByGroup(list){
+  return [...list].sort((a,b)=>{
+    const ga = groupRank(a.group), gb = groupRank(b.group);
+    if(ga !== gb) return ga - gb;
+    return 0; // 그룹 내에서는 원래(추가된) 순서 유지
+  });
+}
+
 function renderBoard(){
   const host=document.getElementById("board");
   host.innerHTML="";
-  RESULTS.forEach(R=>{
+  let lastGroup=null;
+  sortByGroup(RESULTS).forEach(R=>{
+    if(R.group !== lastGroup){
+      lastGroup = R.group;
+      const g=document.createElement("div");
+      g.className="board-grp";
+      g.innerHTML=`<span>${R.group}</span><div class="board-gl"></div>`;
+      host.appendChild(g);
+    }
     const el=document.createElement("div");
     el.className="bcard";
     if(R.error){
@@ -1324,7 +1550,7 @@ function renderBoard(){
     const wjTxt = wj.level > 0 ? `${wj.level}차 웅줍` : "웅줍 없음";
 
     el.innerHTML=`
-      <div class="bt"><span class="bn">${R.short||R.name}</span><span class="bg">${R.group}</span></div>
+      <div class="bt"><span class="bn">${R.short||R.name}</span></div>
       <div class="bs"><span class="bv" style="color:${col}">${s}</span>
         <span class="bd" style="color:${dCol}">${dTxt}</span></div>
       <div><span class="wj-badge ${wj.colorClass}">${wjTxt}</span></div>
@@ -1345,7 +1571,9 @@ let RESULTS=[], sortByScore=false, allOpen=false;
 
 function renderRows(){
   const host=document.getElementById("rows");
-  const list=sortByScore?[...RESULTS].sort((a,b)=>(b.score?.total??-1)-(a.score?.total??-1)):RESULTS;
+  const list=sortByScore
+    ? [...RESULTS].sort((a,b)=>(b.score?.total??-1)-(a.score?.total??-1))
+    : sortByGroup(RESULTS);
   host.innerHTML="";
   let lastGroup=null;
   list.forEach(R=>{
@@ -1515,6 +1743,8 @@ async function run(forceReload){
         bt: backtest(rows,ind,mP,fI.pts,65,VS), ex: extremes(rows) });
     }catch(e){ fails++; RESULTS.push({...t,error:String(e.message||e)}); }
   }
+  renderCashPanel();
+  renderSeasonality();
   renderAllocation();
   renderBoard();
   renderRows();
