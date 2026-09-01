@@ -377,10 +377,14 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .sn-score{font-family:'IBM Plex Mono',monospace;font-size:44px;font-weight:700;line-height:.85}
 .sn-score-of{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-3)}
 .sn-desc{flex:1;font-size:12px;color:var(--ink-2);line-height:1.55}
-.sn-bars{display:flex;align-items:flex-end;gap:2px;height:56px;margin-bottom:8px}
-.sn-bar{flex:1;background:var(--rule);border-radius:2px 2px 0 0;position:relative;
-  transition:height .6s cubic-bezier(.4,0,.2,1)}
-.sn-bar.now{outline:2px solid var(--ink);outline-offset:1px}
+.sn-bars{position:relative;display:flex;align-items:stretch;gap:2px;height:64px;margin-bottom:8px}
+.sn-bars::before{content:'';position:absolute;left:0;right:0;top:50%;height:1px;
+  background:var(--ink-3);opacity:.4;z-index:0}
+.sn-slot{flex:1;position:relative}
+.sn-bar{position:absolute;left:0;right:0;border-radius:2px;min-height:3px;
+  transition:height .6s cubic-bezier(.4,0,.2,1), top .6s cubic-bezier(.4,0,.2,1),
+    bottom .6s cubic-bezier(.4,0,.2,1)}
+.sn-bar.now{outline:2px solid var(--ink);outline-offset:1px;z-index:1}
 .sn-bar-label{position:absolute;bottom:-16px;left:0;right:0;text-align:center;
   font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--ink-3)}
 .sn-stats{display:flex;justify-content:space-between;margin-top:20px;
@@ -1224,79 +1228,116 @@ const won = v => "₩" + v.toLocaleString("ko-KR");
    공격형·안정형 배분안이 각각 산출한 현금 비중을 그대로 가져와 보여준다.
    별도의 새 산식을 만들지 않고 기존 buildAllocation 로직을 재사용하므로,
    위쪽 배분 카드와 항상 일관된 숫자가 나온다. */
-/* ═══════════ 계절성 (S&P500·나스닥 10년) ═══════════
-   month.avg_rank는 1(그해 최고 성과월)~12(그해 최저 성과월) 평균 순위다.
-   "1~12점, 높을수록 좋다"는 요청에 맞춰 13-avg_rank로 뒤집어 표시한다.
-   즉 avg_rank=1(최고 성과월) → 12점, avg_rank=12(최저 성과월) → 1점. */
+/* ═══════════ 계절성 (S&P500 1950~2025년 / 나스닥 정성적 순위) ═══════════
+   S&P500은 사진 자료(Carson Investment Research / YCharts)와 정확히 같은
+   1950년 이후 76년 "월평균 수익률 %" 방식을 그대로 쓴다. 10년 자체 계산·
+   12점 만점 순위 변환 방식은 완전히 폐기했다 — 표본이 짧고 계산 방식이
+   달라 공개된 통계와 다른 숫자가 나왔기 때문이다.
+   나스닥은 신뢰할 수 있는 76년 단위 수치를 확보하지 못해 avg_return 없이
+   순위만 참고용으로 표시하고, 화면에 "수치 미검증"이라고 명시한다. */
 function renderSeasonality(){
   const host = document.getElementById("seasonGrid");
   const S = DATA && DATA.seasonality;
 
-  if(!S || (!S.sp500 && !S.nasdaq)){
+  if(!S || !S.sp500){
     host.innerHTML = `<div class="season-card"><div class="sn-hd">
       <span class="sn-t">데이터 없음</span></div>
       <div style="font-size:12px;color:var(--ink-2)">
-      data.json에 계절성 데이터가 아직 없습니다. 다음 데이터 갱신을 기다리거나
-      Actions에서 수동 실행하십시오.</div></div>`;
+      data.json에 계절성 데이터가 아직 없습니다. Actions에서 워크플로를
+      한 번 실행하면 즉시 채워집니다(네트워크 조회 없이 고정값을 넣는
+      방식이라 실패할 일이 없습니다).</div></div>`;
     document.getElementById("seasonNote").textContent = "";
     return;
   }
 
   const nowMonth = new Date().getMonth() + 1; // 1~12
   const MN = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+  const barColor = ret => ret==null ? "var(--rule)" :
+    ret >= 1.0 ? "var(--jade)" : ret >= 0 ? "#4E8F6B" :
+    ret >= -0.3 ? "var(--amber)" : "var(--rust)";
 
-  const cards = [
-    { key:"sp500",  flag:"S&P 500" },
-    { key:"nasdaq", flag:"나스닥 종합" },
-  ].map(c=>{
-    const d = S[c.key];
-    if(!d) return `<div class="season-card"><div class="sn-hd"><span class="sn-t">${c.flag}</span></div>
-      <div style="font-size:12px;color:var(--ink-3)">데이터 없음</div></div>`;
+  /* ── S&P500 카드: 사진과 동일하게 실제 %를 막대로 표시 ── */
+  const sp = S.sp500;
+  const spCur = sp.months[nowMonth-1];
+  const spCol = barColor(spCur.avg_return);
+  const spDesc =
+    spCur.rank <= 3  ? `1950년 이후 ${sp.years_n}년 중 대체로 최상위권(전체 12개월 중 ${spCur.rank}위) 성과월입니다.` :
+    spCur.rank <= 6  ? `평균보다 다소 좋은 편(${spCur.rank}위)이었습니다.` :
+    spCur.rank <= 9  ? `평균보다 다소 약한 편(${spCur.rank}위)이었습니다.` :
+                        `1950년 이후 대체로 최하위권(${spCur.rank}위) 성과월입니다.`;
 
-    const cur = d.months[nowMonth-1];
-    const score = cur.avg_rank==null ? null : Math.round((13 - cur.avg_rank)*10)/10;
-    const col = score==null ? "var(--ink-3)" : score>=8 ? "var(--jade)" : score>=5 ? "var(--amber)" : "var(--rust)";
-    const desc = score==null ? "표본 부족" :
-      score>=9  ? "10년 중 이맘때가 대체로 최상위권 성과월이었습니다." :
-      score>=7  ? "평균보다 성과가 좋았던 달에 속합니다." :
-      score>=5  ? "특별히 좋지도 나쁘지도 않은 중간 정도였습니다." :
-      score>=3  ? "평균보다 성과가 약했던 달에 속합니다." :
-                  "10년 중 이맘때가 대체로 최하위권 성과월이었습니다.";
+  const spBars = sp.months.map((m,i)=>{
+    const isNow = (i+1)===nowMonth;
+    const maxAbs = Math.max(...sp.months.map(x=>Math.abs(x.avg_return)));
+    const halfPct = Math.max(4, Math.abs(m.avg_return)/maxAbs*48); // 0선 기준 최대 48%
+    const isNeg = m.avg_return < 0;
+    const barStyle = isNeg
+      ? `top:50%;height:${halfPct}%;`
+      : `bottom:50%;height:${halfPct}%;`;
+    return `<div class="sn-slot">
+      <div class="sn-bar${isNow?' now':''}" style="${barStyle}background:${barColor(m.avg_return)}"></div>
+      <span class="sn-bar-label">${i+1}</span></div>`;
+  }).join("");
 
-    const bars = d.months.map((m,i)=>{
-      const isNow = (i+1)===nowMonth;
-      const h = m.avg_rank==null ? 4 : Math.max(4, (13-m.avg_rank)/12*100);
-      const bc = m.avg_rank==null ? "var(--rule)" :
-        (13-m.avg_rank)>=8 ? "var(--jade)" : (13-m.avg_rank)>=5 ? "var(--amber)" : "var(--rust)";
-      return `<div class="sn-bar${isNow?' now':''}" style="height:${h}%;background:${bc}">
+  const spCard = `<div class="season-card">
+    <div class="sn-hd"><span class="sn-t">S&amp;P 500</span>
+      <span class="sn-month">${MN[nowMonth-1]} · ${sp.years}</span></div>
+    <div class="sn-score-row">
+      <div><span class="sn-score" style="color:${spCol}">${spCur.avg_return>=0?'+':''}${spCur.avg_return}%</span>
+        <span class="sn-score-of">평균</span></div>
+      <div class="sn-desc">${spDesc}</div>
+    </div>
+    <div class="sn-bars">${spBars}</div>
+    <div class="sn-stats">
+      <span><span class="k">순위</span><span class="v">${spCur.rank} / 12</span></span>
+      <span><span class="k">플러스 마감 비율</span><span class="v">${spCur.win_rate}%</span></span>
+      <span><span class="k">표본</span><span class="v">${sp.years_n}개년</span></span>
+    </div>
+  </div>`;
+
+  /* ── 나스닥 카드: 수치 미검증이므로 순위(등수)만, 색은 절제된 회색조 ── */
+  const nq = S.nasdaq;
+  let nqCard = "";
+  if(nq){
+    const nqCur = nq.months[nowMonth-1];
+    const nqDesc =
+      nqCur.rank <= 3  ? "역사적으로 강세 경향이 있다고 자주 언급되는 달입니다." :
+      nqCur.rank <= 9  ? "특별히 강하거나 약하다고 언급되지 않는 중간 구간입니다." :
+                          "역사적으로 약세 경향이 있다고 자주 언급되는 달입니다(9월 효과와 유사).";
+    const nqBars = nq.months.map((m,i)=>{
+      const isNow=(i+1)===nowMonth;
+      const h = Math.max(6, (13-m.rank)/12*46);
+      const bc = m.rank<=3 ? "var(--jade)" : m.rank>=10 ? "var(--rust)" : "var(--amber)";
+      return `<div class="sn-slot">
+        <div class="sn-bar${isNow?' now':''}" style="bottom:50%;height:${h}%;background:${bc};opacity:.6"></div>
         <span class="sn-bar-label">${i+1}</span></div>`;
     }).join("");
-
-    return `<div class="season-card">
-      <div class="sn-hd"><span class="sn-t">${c.flag}</span>
-        <span class="sn-month">${MN[nowMonth-1]} · 최근 ${d.years_used}개년</span></div>
+    nqCard = `<div class="season-card">
+      <div class="sn-hd"><span class="sn-t">나스닥 <span style="font-size:9px;color:var(--rust);font-weight:400">(수치 미검증)</span></span>
+        <span class="sn-month">${MN[nowMonth-1]} · ${nq.years}</span></div>
       <div class="sn-score-row">
-        <div><span class="sn-score" style="color:${col}">${score==null?"—":score}</span>
-          <span class="sn-score-of">/ 12</span></div>
-        <div class="sn-desc">${desc}</div>
+        <div><span class="sn-score" style="color:var(--ink-2)">${nqCur.rank}</span>
+          <span class="sn-score-of">/ 12위</span></div>
+        <div class="sn-desc">${nqDesc}</div>
       </div>
-      <div class="sn-bars">${bars}</div>
+      <div class="sn-bars">${nqBars}</div>
       <div class="sn-stats">
-        <span><span class="k">평균 등락률</span><span class="v">${cur.avg_return==null?"—":(cur.avg_return>=0?"+":"")+cur.avg_return+"%"}</span></span>
-        <span><span class="k">플러스 마감 비율</span><span class="v">${cur.win_rate==null?"—":cur.win_rate+"%"}</span></span>
-        <span><span class="k">표본</span><span class="v">${cur.n_years}개년</span></span>
+        <span style="color:var(--ink-3)">평균 수익률(%)은 신뢰할 만한 76년 단위 공개 자료를 확보하지 못해
+        표시하지 않습니다. 순위만 정성적 참고용입니다.</span>
       </div>
     </div>`;
-  });
+  }
 
-  host.innerHTML = cards.join("");
+  host.innerHTML = spCard + nqCard;
   document.getElementById("seasonNote").innerHTML =
-    `점수는 "그해 12개월 중 이 달이 몇 등이었는가"의 10년 평균 순위를 12점 만점으로 뒤집은 값입니다
-     (1등 달 → 12점, 12등 달 → 1점). 막대그래프의 굵은 테두리가 현재 월입니다.<br>
-     <b>표본이 연 10개뿐이라 통계적으로 약합니다.</b> 특정 달이 우연히 몇 년 연속 좋았거나 나빴을
-     가능성을 배제할 수 없고, 앞으로도 같은 패턴이 반복된다는 보장은 전혀 없습니다.
-     매매 시점을 이 점수 하나로 정하지 마십시오.`;
+    `<b>S&amp;P500 수치는 1950~2025년 76년간의 실제 월평균 수익률입니다</b>
+     (출처: ${sp.source}). 10년 자체 계산이 아닌 검증된 장기 통계이므로
+     조회할 때마다 같은 숫자가 나옵니다 — 이는 버그가 아니라 의도된 동작입니다.<br>
+     나스닥은 신뢰할 수 있는 장기 % 데이터를 확보하지 못해 정성적 순위만 참고용으로 표시했습니다.<br>
+     <b>이는 76년 평균이며 특정 연도의 결과를 예측하지 않습니다.</b> 2020년 9월처럼 평균과 반대로
+     움직인 해도 다수 있었습니다. 매매 시점을 이 통계 하나로 정하지 마십시오.`;
 }
+
 
 function renderCashPanel(){
   const A_aggr = buildAllocation("aggressive");

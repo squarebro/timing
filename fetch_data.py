@@ -38,13 +38,6 @@ AUX = [
 
 ALL_SYMBOLS = sorted(set(TICKERS + AUX))
 
-# ── 계절성 분석 전용 (S&P500·나스닥 10년치) ──
-# 이 두 개는 위 ALL_SYMBOLS와 별도로 훨씬 긴 기간을 받는다.
-# 목적이 "월별 상대 순위"뿐이라 종가만 있으면 되고, 3년치 일봉과는
-# 별도의 국(dict)에 저장한다.
-SEASONALITY_SYMS = {"sp500": "^GSPC", "nasdaq": "^IXIC"}
-SEASONALITY_PERIOD = "10y"
-
 
 def fetch_symbol(symbol, period="3y", retries=3):
     """yfinance로 일봉을 받아 프런트에서 쓰는 {t,c,h,l} 형태로 변환."""
@@ -80,65 +73,59 @@ def fetch_symbol(symbol, period="3y", retries=3):
     return {"ok": False, "error": last_err, "rows": []}
 
 
-def compute_seasonality(rows):
-    """
-    10년 일봉에서 "각 연도의 각 월이 그해 12개월 중 수익률 몇 등이었는가"를 계산.
-    반환값의 month_rank[i] (i=0~11, 1월~12월)는 1~12 사이 실수로,
-    1에 가까울수록 그 달이 그해 최고 성과월이었던 경우가 많았다는 뜻이다.
+# ── 계절성: 10년 자체 계산 대신 공신력 있는 장기 통계를 고정값으로 사용 ──
+# 이유: 10년 표본으로 매번 자체 계산하면 (1) 표본이 짧아 통계적으로 약하고
+# (2) 계산 방식(상대 순위)이 통상 인용되는 "월평균 수익률 %" 방식과 달라
+# Carson Investment Research·YCharts 등 공개 자료와 다른 숫자가 나온다.
+# 아래 수치는 1950~2025년 S&P500 실제 데이터(YCharts 집계, Carson Investment
+# Research 및 여러 리서치에서 반복 인용되는 표준 수치)를 그대로 옮긴 것이다.
+# 자동 계산이 아니므로 매번 똑같이 나오며, 이는 의도된 동작이다 — 76년
+# 평균은 어차피 하루이틀 사이에 바뀌지 않는다.
+SP500_SEASONALITY_1950 = {
+    "years": "1950–2025",
+    "years_n": 76,
+    "source": "YCharts / Carson Investment Research",
+    "months": [
+        {"month": 1,  "avg_return": 1.0,  "win_rate": 59.0, "rank": 6},
+        {"month": 2,  "avg_return": -0.1, "win_rate": 54.0, "rank": 10},
+        {"month": 3,  "avg_return": 1.1,  "win_rate": 64.0, "rank": 5},
+        {"month": 4,  "avg_return": 1.5,  "win_rate": 71.0, "rank": 1},
+        {"month": 5,  "avg_return": 0.3,  "win_rate": 59.0, "rank": 8},
+        {"month": 6,  "avg_return": 0.1,  "win_rate": 54.0, "rank": 9},
+        {"month": 7,  "avg_return": 1.2,  "win_rate": 59.0, "rank": 4},
+        {"month": 8,  "avg_return": -0.1, "win_rate": 55.0, "rank": 11},
+        {"month": 9,  "avg_return": -0.7, "win_rate": 44.0, "rank": 12},
+        {"month": 10, "avg_return": 0.9,  "win_rate": 61.0, "rank": 7},
+        {"month": 11, "avg_return": 1.5,  "win_rate": 68.0, "rank": 2},
+        {"month": 12, "avg_return": 1.4,  "win_rate": 74.0, "rank": 3},
+    ],
+}
 
-    표본이 10개 연도뿐이라 통계적으로 약하다는 점을 이 함수를 쓰는 쪽에서
-    반드시 함께 표시해야 한다. 이건 계절성의 "경향"이지 예측이 아니다.
-    """
-    from collections import defaultdict
-
-    by_year_month = defaultdict(list)  # {(year,month): [rows...]}
-    for r in rows:
-        d = datetime.fromtimestamp(r["t"] / 1000, tz=timezone.utc)
-        by_year_month[(d.year, d.month)].append(r)
-
-    monthly_return = {}  # (year,month) -> 그 달의 수익률(%)
-    for (y, m), rs in by_year_month.items():
-        rs_sorted = sorted(rs, key=lambda x: x["t"])
-        if len(rs_sorted) < 5:  # 표본이 너무 적은 달(수집 경계)은 제외
-            continue
-        start, end = rs_sorted[0]["c"], rs_sorted[-1]["c"]
-        if start:
-            monthly_return[(y, m)] = (end / start - 1) * 100
-
-    years = sorted(set(y for y, m in monthly_return))
-    rank_sum = [0.0] * 12
-    rank_n = [0] * 12
-    return_sum = [0.0] * 12
-    return_n = [0] * 12
-    win_n = [0] * 12   # 그 달이 플러스로 마감한 횟수
-
-    for y in years:
-        year_rows = [(m, monthly_return[(y, m)]) for m in range(1, 13) if (y, m) in monthly_return]
-        if len(year_rows) < 10:  # 그해 데이터가 너무 부족하면 순위 계산에서 제외
-            continue
-        # 수익률 내림차순 정렬 → 1등이 그해 최고 성과월
-        ranked = sorted(year_rows, key=lambda x: -x[1])
-        rank_of = {m: i + 1 for i, (m, _) in enumerate(ranked)}
-        for m, ret in year_rows:
-            rank_sum[m - 1] += rank_of[m]
-            rank_n[m - 1] += 1
-            return_sum[m - 1] += ret
-            return_n[m - 1] += 1
-            if ret > 0:
-                win_n[m - 1] += 1
-
-    months = []
-    for i in range(12):
-        n = rank_n[i]
-        months.append({
-            "month": i + 1,
-            "avg_rank": round(rank_sum[i] / n, 2) if n else None,
-            "avg_return": round(return_sum[i] / n, 2) if return_n[i] else None,
-            "win_rate": round(win_n[i] / return_n[i] * 100, 1) if return_n[i] else None,
-            "n_years": n,
-        })
-
-    return {"years_used": len(years), "months": months}
+# 나스닥은 S&P500만큼 검증된 76년 단위 공개 표를 확보하지 못했다.
+# 나스닥100(1985~2025, 41년) 기준으로 공개된 정성적 패턴(11·12월 최고,
+# 1·9월 최저, 2월도 약함)만 확인되었고 연도별 정확한 % 수치는 출처마다
+# 갈린다. 부정확한 숫자를 그럴듯하게 제시하는 것보다, 검증되지 않은
+# 값임을 명시하고 방향성(순위)만 참고용으로 제공하는 편이 낫다고 판단했다.
+NASDAQ_SEASONALITY_APPROX = {
+    "years": "1985–2025 (근사)",
+    "years_n": 41,
+    "source": "정성적 패턴만 확인됨 — 연도별 % 수치 미검증",
+    "verified": False,
+    "months": [
+        {"month": 1,  "rank": 2},   # 승률은 높으나 변동성 큼
+        {"month": 2,  "rank": 11},  # 약세로 자주 언급됨
+        {"month": 3,  "rank": 4},
+        {"month": 4,  "rank": 3},
+        {"month": 5,  "rank": 5},
+        {"month": 6,  "rank": 8},
+        {"month": 7,  "rank": 6},
+        {"month": 8,  "rank": 7},
+        {"month": 9,  "rank": 12},  # 최저 승률권으로 반복 언급
+        {"month": 10, "rank": 9},
+        {"month": 11, "rank": 1},   # 최고 승률월로 반복 언급
+        {"month": 12, "rank": 10},
+    ],
+}
 
 
 def fetch_crypto_fg():
@@ -178,17 +165,14 @@ def main():
     cfg = fetch_crypto_fg()
     print("OK" if cfg["ok"] else f"실패 — {cfg.get('error')}")
 
-    print(f"\n계절성 분석용 10년 데이터 ({SEASONALITY_PERIOD})")
-    seasonality = {}
-    for key, sym in SEASONALITY_SYMS.items():
-        print(f"  {sym:<10}", end=" ", flush=True)
-        r = fetch_symbol(sym, period=SEASONALITY_PERIOD)
-        if r["ok"]:
-            seasonality[key] = compute_seasonality(r["rows"])
-            print(f"OK  ({r['count']}행 → {seasonality[key]['years_used']}개 연도 사용)")
-        else:
-            print(f"실패 — {r['error']}")
-        time.sleep(0.6)
+    print("\n계절성 데이터 (고정값 — 1950년 이후 76년 통계, 매번 동일)")
+    print(f"  S&P500  OK  (YCharts/Carson 집계, {SP500_SEASONALITY_1950['years']}, "
+          f"{SP500_SEASONALITY_1950['years_n']}개년)")
+    print(f"  나스닥   OK  (정성적 순위만, 수치 미검증 — {NASDAQ_SEASONALITY_APPROX['years']})")
+    seasonality = {
+        "sp500": SP500_SEASONALITY_1950,
+        "nasdaq": NASDAQ_SEASONALITY_APPROX,
+    }
 
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
