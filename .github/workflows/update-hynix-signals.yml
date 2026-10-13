@@ -1,0 +1,101 @@
+name: Update Hynix flow and US real yield
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 9 * * 1-5' # 18:15 KST, Monday–Friday (UTC 09:15)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: timing-data-json
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Identify actual checked-out source
+        run: |
+          echo "CHECKOUT_SHA=$(git rev-parse HEAD)"
+          echo "COLLECTOR_SHA256=$(sha256sum update_hynix_signals.py)"
+          grep -n "HYNIX_COLLECTOR_VERSION\|2026-10-13-r4-schema-tests" update_hynix_signals.py || true
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --no-cache-dir 'pandas>=2.0,<3' 'requests>=2.31,<3' 'beautifulsoup4>=4.12,<5' 'lxml>=5,<7'
+
+      - name: Verify correct collector version and input data
+        run: |
+          test -s data.json || { echo 'ERROR: data.json not found'; exit 1; }
+          test -s update_hynix_signals.py || { echo 'ERROR: collector missing'; exit 1; }
+          grep -q '2026-10-13-r4-schema-tests' update_hynix_signals.py || {
+            echo 'ERROR: Old collector remains. Replace root/update_hynix_signals.py with r4 BEFORE running this workflow.'
+            exit 1
+          }
+          echo 'Collector version verified: r4'
+
+      - name: Run offline parser and error-handling tests
+        run: |
+          test -f tests/test_hynix.py || { echo 'ERROR: tests/test_hynix.py missing'; exit 1; }
+          python -m unittest discover -s tests -p 'test_hynix.py' -v
+
+      - name: Fetch foreign investor flow and US real yield
+        id: collect
+        env:
+          NAVER_MAX_PAGES: '40'
+        run: python -u update_hynix_signals.py
+
+      - name: Summarize source health
+        if: always()
+        shell: bash
+        run: |
+          if [ ! -s data.json ]; then
+            echo 'ERROR: data.json missing; cannot report source health.'
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('data.json').read_text(encoding='utf-8'))
+          s=d.get('hynix_signals',{}).get('source_status',{})
+          lines=['## Hynix signal collection status','']
+          for k in ('flow','real_yield'):
+              x=s.get(k,{})
+              lines.append(f"- **{k}**: {'OK' if x.get('ok') else 'FAILED / NOT COLLECTED'}; last data date: {x.get('latest_date','unknown')}")
+              if x.get('error'): lines.append(f"  - error: `{str(x['error'])[:400]}`")
+          out='\n'.join(lines)+'\n'
+          print(out)
+          import os
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf-8') as f: f.write(out)
+          PY
+
+      - name: Commit successful observations and error status
+        if: always()
+        shell: bash
+        run: |
+          if [ ! -s data.json ]; then echo 'data.json missing; cannot commit'; exit 1; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data.json
+          if git diff --cached --quiet; then
+            echo 'No data.json change to commit'
+            exit 0
+          fi
+          git commit -m 'Update Hynix signals and source health'
+          git pull --rebase origin main
+          git push origin HEAD:main
