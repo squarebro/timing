@@ -523,8 +523,8 @@ button:disabled{opacity:.4;cursor:not-allowed}
   <div class="hynix-breakdown" id="hyBreakdown"></div>
   <div class="hynix-note" id="hyBacktest">백테스트: 과거 외국인 수급·실질금리 데이터 확인 중입니다.</div>
   <div class="hynix-action" id="hyAction">미국 국채금리와 외국인 수급 데이터가 필요합니다.</div>
-  <div class="hynix-note" id="hySource">미국 국채 명목금리는 기존 ^TNX, 실질금리는 FRED DFII10, 외국인 수급은 KRX 투자자별 거래대금을 사용합니다. 외부 수집 실패 시 마지막 자료를 최신으로 간주하지 않습니다.</div>
-  <div class="hynix-note"><b>주의:</b> 점수는 설명 가능한 휴리스틱이며 과거 수익률 예측력이나 승률이 검증된 모델이 아닙니다. <b>매도점수 = 100 − 매수점수</b>로 산출하며, 두 점수는 독립적인 예측 확률이 아닙니다. 입력값이 없거나 오래되면 점수를 표시하지 않습니다. 부채 상환용 확정 매도는 점수와 무관하게 처리하십시오. 실질금리 추가 점수는 사전 가설이고, 아래 검증은 수익성 보장을 뜻하지 않습니다.</div>
+  <div class="hynix-note" id="hySource">미국 국채 명목금리는 기존 ^TNX, 실질금리는 FRED DFII10, 외국인 수급은 로그인 없는 네이버 금융의 순매수 수량×당일 종가로 추정합니다(정확한 체결대금 아님). 외부 수집 실패 시 마지막 자료를 최신으로 간주하지 않습니다.</div>
+  <div class="hynix-note"><b>주의:</b> 점수는 설명 가능한 휴리스틱이며 과거 수익률 예측력이나 승률이 검증된 모델이 아닙니다. <b>매도점수 = 100 − 매수점수</b>로 산출하며, 두 점수는 독립적인 예측 확률이 아닙니다. 입력값이 없거나 오래되면 점수를 표시하지 않습니다. 부채 상환용 확정 매도는 점수와 무관하게 처리하십시오. 네이버 금융 데이터는 공개 HTML 조회 방식으로 제공자가 구조를 변경할 수 있습니다. 실질금리 추가 점수는 사전 가설이고, 아래 검증은 수익성 보장을 뜻하지 않습니다.</div>
 </div>
 
 <div class="sec"><span class="n">06</span><h2>종목별 매수 적합도 &amp; 웅줍 포인트</h2><div class="ln"></div></div>
@@ -1799,7 +1799,7 @@ function hyMarkMissing(message){
   document.getElementById("hyAction").textContent=message;
 }
 // 자동 수집 형식: DATA.hynix_signals = { updated_at, flow: [{date, foreign_net_100m, market_cap_100m}], real_yield:[{date,value}] }.
-// 수급은 외국인합계 거래대금(억원); 음수=순매도. 자동 수급 기준이 7일 넘으면 계산하지 않습니다.
+// 수급은 네이버 공개 외국인 순매수 수량×당일 종가로 추정한 거래대금(억원); 음수=순매도. 시총 역시 해당 일의 외국인 보유수량·보유율·종가로 추정합니다. 자동 수급 기준이 7일 넘으면 계산하지 않습니다.
 const hyDay = d => new Date(d+"T00:00:00").getTime();
 const hyISO = t => new Date(t).toISOString().slice(0,10);
 function hyAge(date){ return Math.round((new Date().setHours(0,0,0,0)-hyDay(date))/86400000); }
@@ -1811,7 +1811,7 @@ function hyGetAuto(){
  const flow=sig.flow.filter(x=>x && /^\d{4}-\d{2}-\d{2}$/.test(x.date)&&Number.isFinite(x.foreign_net_100m)&&Number.isFinite(x.market_cap_100m)&&x.market_cap_100m>0).sort((a,b)=>a.date.localeCompare(b.date));
  if(flow.length<20)return null;
  const last=flow[flow.length-1];
- return {flow5:hyLastN(flow,5),flow20:hyLastN(flow,20),cap:last.market_cap_100m,date:last.date,kind:"자동(KRX)",history:flow};
+ return {flow5:hyLastN(flow,5),flow20:hyLastN(flow,20),cap:last.market_cap_100m,date:last.date,kind:"자동(NAVER·추정금액)",history:flow};
 }
 function hyNominalRows(){const y=DATA?.series?.["^TNX"];return Array.isArray(y)?y:[];}
 function hyRealRows(){
@@ -1857,7 +1857,7 @@ function hyRender(){
  const y=hyNominalRows(), r=hyRealRows(), auto=hyGetAuto(),manual=hyRead();
  const status=document.getElementById("hyAutoStatus"),box=document.getElementById("hyBreakdown");box.innerHTML="";
  const flow=manual ? {...manual,kind:"수동 입력"} : auto;
- status.textContent=manual?"수동 입력이 자동 데이터를 덮어쓰고 있습니다. '수동값 제거·자동 전환'을 누르면 복귀합니다.":auto?`외국인 수급 자동 수집: ${auto.date} · ${hyValidAge(auto.date,7)?"최신":"오래된 데이터(점수 중단)"}`:"자동 수급 미수집. data.json에 hynix_signals.flow가 없거나 수집에 실패했습니다. 수동 입력은 접힌 항목에서 가능합니다.";
+ status.textContent=manual?"수동 입력이 자동 데이터를 덮어쓰고 있습니다. '수동값 제거·자동 전환'을 누르면 복귀합니다.":auto?`외국인 수급 자동 수집(NAVER): ${auto.date} · ${hyValidAge(auto.date,7)?"최신":"오래된 데이터(점수 중단)"}`:"자동 수급 미수집. data.json에 hynix_signals.flow가 없거나 수집에 실패했습니다. 수동 입력은 접힌 항목에서 가능합니다.";
  const fail=m=>{hyMarkMissing(m);hyBacktestView();};
  if(y.length<61)return fail("^TNX 명목 국채금리 61거래일 이상 데이터가 필요합니다.");
  if(r.length<61)return fail("실질금리(FRED DFII10) 데이터가 없어 점수를 산출하지 않습니다. data.json 갱신을 확인하십시오.");
@@ -1876,7 +1876,7 @@ function hyRender(){
  document.getElementById("hySellDesc").textContent="매수 점수의 보수(100−매수)";
  document.getElementById("hyAction").textContent=p.score>=70?"매수 우호 — 목표 비중 내 추가 매수 검토":p.score>=55?"매수 우위 — 분할 매수 검토":p.score>=45?"중립 — 비중 유지":p.score>=30?"매도 우위 — 초과비중 축소 검토":"매도 압력 우세 — 리스크 점검 및 초과비중 축소";
  box.innerHTML=`<div class="hynix-metric"><b>미국 명목 10년물: ${last.c.toFixed(2)}%</b>20일 ${(last.c-yn.c).toFixed(2)}%p · 60일 ${(last.c-yo.c).toFixed(2)}%p · ${p.nom.toFixed(1)}/100</div><div class="hynix-metric"><b>미국 실질 10년물: ${rr.value.toFixed(2)}%</b>20일 ${(rr.value-rn.value).toFixed(2)}%p · 60일 ${(rr.value-ro.value).toFixed(2)}%p · ${p.real.toFixed(1)}/100</div><div class="hynix-metric"><b>외국인 수급: 5일 ${Number(flow.flow5).toLocaleString("ko-KR")}억원 / 20일 ${Number(flow.flow20).toLocaleString("ko-KR")}억원</b>시총 대비 각각 ${p.pct5.toFixed(3)}% / ${p.pct20.toFixed(3)}% · ${p.flow.toFixed(1)}/100</div>`;
- document.getElementById("hySource").textContent=`외국인 데이터 ${flow.date} (${flow.kind}) · 미국 명목금리 ${yd} · 실질금리 ${rr.date}. 채권 및 수급 데이터는 지연될 수 있으며 점수는 경험적 규칙이지 확률이 아닙니다.`;
+ document.getElementById("hySource").textContent=`외국인 데이터 ${flow.date} (${flow.kind}; 금액·시총 추정) · 미국 명목금리 ${yd} · 실질금리 ${rr.date}. 외국인 순매수 금액 및 시총은 공개 수량·종가·보유율 기반 추정값입니다. 데이터 지연·웹페이지 변경에 유의하십시오. 점수는 경험적 규칙이지 확률이 아닙니다.`;
  hyBacktestView();
 }
 document.getElementById("hySave").addEventListener("click",()=>{
