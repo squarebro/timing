@@ -400,6 +400,23 @@ button:disabled{opacity:.4;cursor:not-allowed}
   font-size:10px;color:var(--ink-2);margin-top:11px}
 .legend span::before{content:'';display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px}
 .lg-a::before{background:var(--jade)} .lg-b::before{background:var(--amber)} .lg-c::before{background:var(--rust)}
+
+/* ── SK HYNIX MACRO / FOREIGN FLOW TIMING ── */
+.hynix-wrap{background:var(--card);border:1px solid var(--rule);box-shadow:var(--shadow);padding:17px}
+.hynix-scores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.hynix-score{border:1px solid var(--rule);background:var(--paper-2);padding:13px}
+.hynix-score .label{font-size:12px;color:var(--ink-2);font-weight:600}
+.hynix-score .number{font-family:'IBM Plex Mono',monospace;font-size:38px;font-weight:700;line-height:1.2}
+.hynix-score .hint{font-size:11px;line-height:1.6;color:var(--ink-2)}
+.hynix-inputs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px 0}
+.hynix-inputs label{font-size:11px;color:var(--ink-2);display:flex;flex-direction:column;gap:5px}
+.hynix-inputs input{font-family:'IBM Plex Mono',monospace;font-size:13px;width:100%;padding:10px;border:1px solid var(--rule);background:var(--paper-2);color:var(--ink);border-radius:3px}
+.hynix-breakdown{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:11px 0}
+.hynix-metric{border-top:1px solid var(--rule);padding-top:9px;font-size:11px;line-height:1.6;color:var(--ink-2)}
+.hynix-metric b{display:block;color:var(--ink);font-size:13px}
+.hynix-note{font-size:11px;line-height:1.8;color:var(--ink-2);margin-top:10px}
+.hynix-action{font-weight:700;font-size:12px;margin-top:7px}
+@media(max-width:700px){.hynix-inputs{grid-template-columns:repeat(2,minmax(0,1fr))}.hynix-breakdown{grid-template-columns:1fr}.hynix-score .number{font-size:32px}}
 </style>
 </head>
 <body>
@@ -487,6 +504,29 @@ button:disabled{opacity:.4;cursor:not-allowed}
 <div class="macro" id="macro"></div>
 <div class="macro-note" id="macroNote">불러오는 중입니다.</div>
 
+
+<div class="sec"><span class="n">05-A</span><h2>SK하이닉스 · 미국 국채금리 × 외국인 수급 타이밍</h2><div class="ln"></div></div>
+<div class="hynix-wrap">
+  <div style="font-size:12px;line-height:1.7;color:var(--ink-2)">미 국채 명목금리(20점) · 미국 10년 실질금리(20점) · SK하이닉스 외국인 순매수(60점)를 결합합니다. <b>자동 데이터 우선, 수동 입력은 대체 수단</b>이며, 과거 시계열을 확보할 때만 검증 통계를 계산합니다.</div>
+  <div class="hynix-scores">
+    <div class="hynix-score"><div class="label">매수 적합도 · BUY</div><div class="number" id="hyBuy">—</div><div class="hint" id="hyBuyDesc">필요 데이터를 입력하면 계산됩니다.</div></div>
+    <div class="hynix-score"><div class="label">매도 적합도 · SELL</div><div class="number" id="hySell">—</div><div class="hint" id="hySellDesc">필요 데이터를 입력하면 계산됩니다.</div></div>
+  </div>
+  <div class="hynix-note" id="hyAutoStatus">자동 데이터 확인 중…</div>
+  <details style="margin-top:12px"><summary style="cursor:pointer;font-size:12px;font-weight:600">자동 수집 실패 시 수동 입력 / 덮어쓰기</summary><div class="hynix-inputs">
+    <label>외국인 최근 5거래일 순매수 (억원)<input id="hyFlow5" type="number" step="any" placeholder="예: 1500 / -1500"></label>
+    <label>외국인 최근 20거래일 순매수 (억원)<input id="hyFlow20" type="number" step="any" placeholder="예: 4000 / -4000"></label>
+    <label>SK하이닉스 시가총액 (억원)<input id="hyCap" type="number" step="any" min="1" placeholder="현재 시총 입력"></label>
+    <label>외국인 수급 데이터 기준일<input id="hyFlowDate" type="date"></label>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="hySave" style="flex:0 1 auto">외국인 수급 저장·평가</button><button id="hyClear" class="ghost" style="flex:0 1 auto">수동값 제거·자동 전환</button></div></details>
+  <div class="hynix-breakdown" id="hyBreakdown"></div>
+  <div class="hynix-note" id="hyBacktest">백테스트: 과거 외국인 수급·실질금리 데이터 확인 중입니다.</div>
+  <div class="hynix-action" id="hyAction">미국 국채금리와 외국인 수급 데이터가 필요합니다.</div>
+  <div class="hynix-note" id="hySource">미국 국채 명목금리는 기존 ^TNX, 실질금리는 FRED DFII10, 외국인 수급은 KRX 투자자별 거래대금을 사용합니다. 외부 수집 실패 시 마지막 자료를 최신으로 간주하지 않습니다.</div>
+  <div class="hynix-note"><b>주의:</b> 점수는 설명 가능한 휴리스틱이며 과거 수익률 예측력이나 승률이 검증된 모델이 아닙니다. <b>매도점수 = 100 − 매수점수</b>로 산출하며, 두 점수는 독립적인 예측 확률이 아닙니다. 입력값이 없거나 오래되면 점수를 표시하지 않습니다. 부채 상환용 확정 매도는 점수와 무관하게 처리하십시오. 실질금리 추가 점수는 사전 가설이고, 아래 검증은 수익성 보장을 뜻하지 않습니다.</div>
+</div>
+
 <div class="sec"><span class="n">06</span><h2>종목별 매수 적합도 &amp; 웅줍 포인트</h2><div class="ln"></div></div>
 <div class="rows" id="rows"></div>
 
@@ -544,7 +584,8 @@ button:disabled{opacity:.4;cursor:not-allowed}
 </details>
 
 <div class="foot">
-  <b>점수 산식 (100점)</b> — 스토캐스틱 5/10/20 종합 32 · 3년 가격 위치 16 · RSI(14) 10 ·
+  <b>하이닉스 수급·금리 전용 점수</b> — 미 명목 10년물 20일 변화 14점·60일 변화 6점, 10년 실질금리 20일 변화 14점·60일 변화 6점, 하이닉스 외국인 최근 5일 순매수 24점·20일 누적 순매수 36점. 외국인 순매수는 시가총액 대비 비율로 표준화합니다. 별도 데이터가 없으면 점수를 산출하지 않습니다.<br>
+  <b>기존 종목별 점수 산식 (100점)</b> — 스토캐스틱 5/10/20 종합 32 · 3년 가격 위치 16 · RSI(14) 10 ·
   200일선 이격 12 · 매크로 12 · 공포탐욕 18.<br>
   <b>웅줍 포인트 산정</b> — 이동평균선(20/60/120/240일선)과 현재 종가 위치를 비교하여 웅줍 단계(1~4차)를 계산합니다.<br>
   <b>한국 반도체 지수</b> — 삼성전자·SK하이닉스·한미반도체 동일가중 바스켓입니다.
@@ -1738,6 +1779,118 @@ function buildDetail(R){
   <div class="why">${why.map(w=>"· "+w).join("<br>")}</div>`;
 }
 
+
+/* ═══════════ 하이닉스: 국채금리 × 외국인 순매수 신호 ═══════════ */
+const HY_LS_KEY="timingDesk.hynixFlow.v1";
+function hyRead(){
+  try { return JSON.parse(localStorage.getItem(HY_LS_KEY)||"null"); }catch(e){return null;}
+}
+function hyNum(v){return v==null||v===""?null:Number(v);}
+function hyPopulate(){
+  const v=hyRead(); if(!v)return;
+  [["hyFlow5",v.flow5],["hyFlow20",v.flow20],["hyCap",v.cap],["hyFlowDate",v.date]]
+    .forEach(([k,x])=>{if(x!=null)document.getElementById(k).value=x;});
+}
+function hyMarkMissing(message){
+  document.getElementById("hyBuy").textContent="—";
+  document.getElementById("hySell").textContent="—";
+  document.getElementById("hyBuyDesc").textContent="점수 산출 보류";
+  document.getElementById("hySellDesc").textContent="점수 산출 보류";
+  document.getElementById("hyAction").textContent=message;
+}
+// 자동 수집 형식: DATA.hynix_signals = { updated_at, flow: [{date, foreign_net_100m, market_cap_100m}], real_yield:[{date,value}] }.
+// 수급은 외국인합계 거래대금(억원); 음수=순매도. 자동 수급 기준이 7일 넘으면 계산하지 않습니다.
+const hyDay = d => new Date(d+"T00:00:00").getTime();
+const hyISO = t => new Date(t).toISOString().slice(0,10);
+function hyAge(date){ return Math.round((new Date().setHours(0,0,0,0)-hyDay(date))/86400000); }
+function hyValidAge(date,max){let n=hyAge(date);return Number.isFinite(n)&&n>=0&&n<=max;}
+function hyLastN(arr,n){return arr.slice(-n).reduce((a,b)=>a+b.foreign_net_100m,0);}
+function hyGetAuto(){
+ const sig=DATA?.hynix_signals;
+ if(!sig || !Array.isArray(sig.flow) || sig.flow.length<20) return null;
+ const flow=sig.flow.filter(x=>x && /^\d{4}-\d{2}-\d{2}$/.test(x.date)&&Number.isFinite(x.foreign_net_100m)&&Number.isFinite(x.market_cap_100m)&&x.market_cap_100m>0).sort((a,b)=>a.date.localeCompare(b.date));
+ if(flow.length<20)return null;
+ const last=flow[flow.length-1];
+ return {flow5:hyLastN(flow,5),flow20:hyLastN(flow,20),cap:last.market_cap_100m,date:last.date,kind:"자동(KRX)",history:flow};
+}
+function hyNominalRows(){const y=DATA?.series?.["^TNX"];return Array.isArray(y)?y:[];}
+function hyRealRows(){
+ const r=DATA?.hynix_signals?.real_yield;
+ return Array.isArray(r)?r.filter(x=>x&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)&&Number.isFinite(x.value)).sort((a,b)=>a.date.localeCompare(b.date)):[];
+}
+function hyPoints(n20,n60,r20,r60,flow5,flow20,cap){
+ const pct5=flow5/cap*100,pct20=flow20/cap*100;
+ const nom20=clamp(50-(n20/0.6)*50,0,100),nom60=clamp(50-(n60/1.2)*50,0,100);
+ const real20=clamp(50-(r20/0.6)*50,0,100),real60=clamp(50-(r60/1.2)*50,0,100);
+ const net5=clamp(50+(pct5/0.5)*50,0,100),net20=clamp(50+(pct20/1.5)*50,0,100);
+ return {score:Math.round((nom20*.7+nom60*.3)*.2+(real20*.7+real60*.3)*.2+(net5*.4+net20*.6)*.6),pct5,pct20,nom:nom20*.7+nom60*.3,real:real20*.7+real60*.3,flow:net5*.4+net20*.6};
+}
+function hyBacktestView(){
+ const el=document.getElementById("hyBacktest"),af=hyGetAuto(),r=hyRealRows(),y=hyNominalRows(),px=DATA?.series?.["000660.KS"];
+ if(!af || af.history.length<160 || r.length<160 || y.length<160 || !Array.isArray(px) || px.length<160){
+  el.innerHTML="<b>과거 검증 대기</b> — 외국인 수급·미 실질금리·국채금리·하이닉스 주가의 최소 160거래일 연속 데이터가 필요합니다. 데이터 미확보 시 수익률·승률을 생성하지 않습니다.";return;
+ }
+ const ns=new Map(y.map(x=>[hyISO(x.t),x.c]));
+ const rs=new Map(r.map(x=>[x.date,x.value]));
+ const ps=new Map(px.map(x=>[hyISO(x.t),x.c]));
+ // 각 날짜의 당시 알려진 값만 사용. 미국 금리는 한국 거래일 전일 값까지만 사용하여 시차에 따른 미래정보 누출 방지.
+ function asof(map,day){const prev=Array.from(map.keys()).filter(d=>d<day).sort().pop();return prev?map.get(prev):null;}
+ const fd=af.history;
+ const samples=[];
+ for(let i=60;i<fd.length-20;i++){
+  const date=fd[i].date,prev=fd[i-20].date,old=fd[i-60].date;
+  const n0=asof(ns,date),n20=asof(ns,prev),n60=asof(ns,old),r0=asof(rs,date),r20=asof(rs,prev),r60=asof(rs,old);
+  const p0=ps.get(date),pNext=ps.get(fd[i+20].date);
+  if([n0,n20,n60,r0,r20,r60,p0,pNext].some(v=>!Number.isFinite(v)) || p0<=0 || pNext<=0)continue;
+  const f5=hyLastN(fd.slice(0,i+1),5),f20=hyLastN(fd.slice(0,i+1),20);
+  const score=hyPoints(n0-n20,n0-n60,r0-r20,r0-r60,f5,f20,fd[i].market_cap_100m).score;
+  samples.push({i,date,score,ret:(pNext/p0-1)*100});
+ }
+ // 겹치는 20거래일 보유기간의 과대 표본 집계를 방지하기 위해 20거래일 간격의 관측만 선택.
+ const evalGroup=fn=>{let arr=samples.filter(fn),used=[],last=-999;for(const z of arr){if(z.i-last>=20){used.push(z);last=z.i;}}return used;};
+ const buy=evalGroup(z=>z.score>=70),sell=evalGroup(z=>z.score<=30);
+ const stats=a=>a.length?`${a.length}건 · 이후 20거래일 평균 ${(a.reduce((s,x)=>s+x.ret,0)/a.length).toFixed(1)}% · 상승 비율 ${(a.filter(x=>x.ret>0).length/a.length*100).toFixed(0)}%`:"표본 0건";
+ const start=samples[0]?.date||"—",end=samples[samples.length-1]?.date||"—";
+ el.innerHTML=`<b>과거 20거래일 사후성과 (탐색적·미검증 신호)</b><br>70점 이상: ${stats(buy)}<br>30점 이하: ${stats(sell)}<br>검증기간: ${start}~${end}, 거래비용·세금 미반영. 비중첩 표본이며 최적화·독립 검증이 없어 투자전략으로 검증되었다는 뜻이 아닙니다. 미국 금리는 한국 거래일 기준 전일 데이터만 사용합니다.`;
+}
+function hyRender(){
+ const y=hyNominalRows(), r=hyRealRows(), auto=hyGetAuto(),manual=hyRead();
+ const status=document.getElementById("hyAutoStatus"),box=document.getElementById("hyBreakdown");box.innerHTML="";
+ const flow=manual ? {...manual,kind:"수동 입력"} : auto;
+ status.textContent=manual?"수동 입력이 자동 데이터를 덮어쓰고 있습니다. '수동값 제거·자동 전환'을 누르면 복귀합니다.":auto?`외국인 수급 자동 수집: ${auto.date} · ${hyValidAge(auto.date,7)?"최신":"오래된 데이터(점수 중단)"}`:"자동 수급 미수집. data.json에 hynix_signals.flow가 없거나 수집에 실패했습니다. 수동 입력은 접힌 항목에서 가능합니다.";
+ const fail=m=>{hyMarkMissing(m);hyBacktestView();};
+ if(y.length<61)return fail("^TNX 명목 국채금리 61거래일 이상 데이터가 필요합니다.");
+ if(r.length<61)return fail("실질금리(FRED DFII10) 데이터가 없어 점수를 산출하지 않습니다. data.json 갱신을 확인하십시오.");
+ if(!flow || [flow.flow5,flow.flow20,flow.cap].some(x=>!Number.isFinite(Number(x))) || Number(flow.cap)<=0||!flow.date)return fail("외국인 순매수 최신 데이터를 자동으로 받지 못했습니다. 수동 입력 또는 GitHub Actions를 확인하십시오.");
+ if(!hyValidAge(flow.date,7))return fail("외국인 수급이 7일 이상 오래됐습니다. 낡은 값으로 매매점수를 만들지 않습니다.");
+ const last=y[y.length-1],yn=y[y.length-21],yo=y[y.length-61],rr=r[r.length-1],rn=r[r.length-21],ro=r[r.length-61];
+ if(![last,yn,yo,rr,rn,ro].every(Boolean))return fail("금리 데이터 결측으로 계산이 불가능합니다.");
+ const yd=hyISO(last.t);
+ if(!hyValidAge(yd,10)||!hyValidAge(rr.date,10))return fail("미 국채 또는 실질금리 데이터가 10일 이상 오래됐습니다.");
+ // 소스 시계열 날짜가 비정상적으로 차이나면 시점 오염을 피한다.
+ if(Math.abs(hyDay(yd)-hyDay(rr.date))>7*86400000)return fail("미 국채금리와 실질금리의 기준일 차이가 7일을 초과했습니다.");
+ const p=hyPoints(last.c-yn.c,last.c-yo.c,rr.value-rn.value,rr.value-ro.value,Number(flow.flow5),Number(flow.flow20),Number(flow.cap));
+ document.getElementById("hyBuy").textContent=p.score+" / 100";
+ document.getElementById("hySell").textContent=(100-p.score)+" / 100";
+ document.getElementById("hyBuyDesc").textContent="명목금리 20% + 실질금리 20% + 수급 60%";
+ document.getElementById("hySellDesc").textContent="매수 점수의 보수(100−매수)";
+ document.getElementById("hyAction").textContent=p.score>=70?"매수 우호 — 목표 비중 내 추가 매수 검토":p.score>=55?"매수 우위 — 분할 매수 검토":p.score>=45?"중립 — 비중 유지":p.score>=30?"매도 우위 — 초과비중 축소 검토":"매도 압력 우세 — 리스크 점검 및 초과비중 축소";
+ box.innerHTML=`<div class="hynix-metric"><b>미국 명목 10년물: ${last.c.toFixed(2)}%</b>20일 ${(last.c-yn.c).toFixed(2)}%p · 60일 ${(last.c-yo.c).toFixed(2)}%p · ${p.nom.toFixed(1)}/100</div><div class="hynix-metric"><b>미국 실질 10년물: ${rr.value.toFixed(2)}%</b>20일 ${(rr.value-rn.value).toFixed(2)}%p · 60일 ${(rr.value-ro.value).toFixed(2)}%p · ${p.real.toFixed(1)}/100</div><div class="hynix-metric"><b>외국인 수급: 5일 ${Number(flow.flow5).toLocaleString("ko-KR")}억원 / 20일 ${Number(flow.flow20).toLocaleString("ko-KR")}억원</b>시총 대비 각각 ${p.pct5.toFixed(3)}% / ${p.pct20.toFixed(3)}% · ${p.flow.toFixed(1)}/100</div>`;
+ document.getElementById("hySource").textContent=`외국인 데이터 ${flow.date} (${flow.kind}) · 미국 명목금리 ${yd} · 실질금리 ${rr.date}. 채권 및 수급 데이터는 지연될 수 있으며 점수는 경험적 규칙이지 확률이 아닙니다.`;
+ hyBacktestView();
+}
+document.getElementById("hySave").addEventListener("click",()=>{
+  const v={flow5:document.getElementById("hyFlow5").value,flow20:document.getElementById("hyFlow20").value,cap:document.getElementById("hyCap").value,date:document.getElementById("hyFlowDate").value};
+  try{localStorage.setItem(HY_LS_KEY,JSON.stringify(v));hyRender();}
+  catch(e){hyMarkMissing("브라우저 저장에 실패했습니다. 저장 기능을 확인하십시오.");}
+});
+document.getElementById("hyClear").addEventListener("click",()=>{
+  localStorage.removeItem(HY_LS_KEY);
+  ["hyFlow5","hyFlow20","hyCap","hyFlowDate"].forEach(k=>document.getElementById(k).value="");
+  hyRender();
+});
+hyPopulate();
+
 /* ═══════════ 실행 ═══════════ */
 async function run(forceReload){
   const btn=document.getElementById("btnRefresh"); btn.disabled=true;
@@ -1750,6 +1903,7 @@ async function run(forceReload){
   renderFG(G);
   const T=macroTilt(G.macro);
   renderMacro(G.macro,T);
+  hyRender();
 
   RESULTS=[]; let fails=0;
   const ACTIVE = getActiveTickers();
