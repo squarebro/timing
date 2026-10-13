@@ -2,9 +2,12 @@ name: Update Hynix flow and US real yield
 on:
   workflow_dispatch:
   schedule:
-    - cron: '15 9 * * 1-5' # 18:15 KST weekdays; holidays may have no new data
+    - cron: '15 9 * * 1-5' # 18:15 KST weekdays; public upstream can lag
 permissions:
   contents: write
+concurrency:
+  group: timing-data-json
+  cancel-in-progress: false
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -13,11 +16,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install --no-cache-dir pandas requests pykrx
+      - run: pip install --no-cache-dir pandas requests beautifulsoup4 lxml
       - run: python update_hynix_signals.py
       - name: Commit data
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add data.json
-          git diff --cached --quiet || (git commit -m 'Update SK hynix flows and real yield' && git push)
+          if ! git diff --cached --quiet; then
+            git commit -m 'Update SK hynix NAVER flow and FRED real yield'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
