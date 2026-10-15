@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Public, no-login SK hynix investor flows (NAVER Finance) + FRED DFII10.
+"""Public, no-login SK hynix foreign/institution flows (NAVER/Npay) + FRED DFII10.
 
-Writes dashboard's data.json / hynix_signals. NAVER's foreign daily net BUY is
-shares, NOT transaction value: foreign_net_100m is an *estimated* KRW value
-(shares * daily close / 100 million). Market cap is estimated contemporaneously
-from foreign-held shares / foreign ownership rate, times the unadjusted close.
+Writes data.json / hynix_signals. Foreign and institution net trades are
+SHARES, not ownership changes or gross trading amounts. Optional *_net_100m
+values estimate KRW value from net shares times close. Scores use signed
+net-share history; market-cap estimates are retained only for legacy clients.
 No KRX credentials, paid API or account needed. Public HTML may change.
 """
 import io
@@ -29,7 +29,7 @@ SESSION.headers.update({
     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/125.0 Safari/537.36',
     'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.7',
 })
-VERSION = "2026-10-13-r4-schema-tests"
+VERSION = "2026-10-16-r5-foreign-institution"
 NAVER_URL = 'https://finance.naver.com/item/frgn.naver'
 
 
@@ -71,53 +71,137 @@ def number(text):
     return float(text)
 
 
-def parse_naver_page(markup):
-    """Parse publicly displayed daily investor table, with schema checks.
+def share_number(value):
+    """Signed net shares; ownership percentages are never share quantities."""
+    text = str(value).strip().replace('−', '-')
+    if '%' in text:
+        raise ValueError('ownership ratio is not net shares')
+    if text.endswith('주'):
+        text = text[:-1]
+    return number(text)
 
-    Never silently interpret foreign *ownership change* as foreign *net buying*.
-    If the source changes its columns, fail closed and keep previous values.
+
+def investor_day(value):
+    text = re.sub(r'\s', '', str(value))
+    if re.fullmatch(r'\d{8}', text):
+        text = f'{text[:4]}-{text[4:6]}-{text[6:]}'
+    elif re.fullmatch(r'\d{2}\.\d{2}\.\d{2}\.?', text):
+        text = '20' + text.rstrip('.').replace('.', '-')
+    else:
+        text = text.rstrip('.').replace('.', '-')
+    from market_sources import valid_day
+    if not valid_day(text):
+        raise ValueError('invalid investor observation date')
+    return text
+
+
+def investor_row(day, close, foreign=None, institution=None, individual=None, volume=None):
+    row = {'date': investor_day(day)}
+    if close is not None:
+        value = number(close)
+        if value <= 0:
+            raise ValueError('invalid daily close')
+        row['close'] = value
+    for name, value in [('foreign', foreign), ('institution', institution), ('individual', individual)]:
+        if value is None or str(value).strip() in ('', '-', '--'):
+            continue  # Missing is not an observed zero.
+        shares = share_number(value)
+        if not shares.is_integer() or not -1e8 < shares < 1e8:
+            raise ValueError('net shares outside supported range')
+        row[name + '_net_shares'] = shares
+        if 'close' in row:
+            row[name + '_net_100m'] = round(row['close'] * shares / 1e8, 5)
+    if not any(k in row for k in ('foreign_net_shares', 'institution_net_shares')):
+        raise ValueError('no foreign or institutional net trading')
+    if volume is not None:
+        try:
+            row['volume'] = share_number(volume)
+        except ValueError:
+            pass
+    return row
+
+
+def parse_naver_json(payload):
+    """NAVER's anonymous /api/stock/000660/frgn investor rows.
+
+    Accept explicitly named net-trading fields only; held shares/ownership are
+    distinct and must never be guessed as daily net buying.
     """
+    value = json.loads(payload) if isinstance(payload, str) else payload
+    if isinstance(value, dict):
+        value = next((value[k] for k in ('dealTrendInfos', 'data', 'items') if isinstance(value.get(k), list)), None)
+    if not isinstance(value, list):
+        raise ValueError('NAVER investor JSON list missing')
+    rows = {}
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        def field(*names):
+            return next((item[k] for k in names if k in item), None)
+        try:
+            row = investor_row(field('bizdate', 'businessDate', 'date'), field('closePrice'),
+                field('foreignNetBuySell', 'foreignerPureBuyQuant'),
+                field('organNetBuySell', 'organPureBuyQuant', 'institutionNetBuySell'),
+                field('individualNetBuySell', 'individualPureBuyQuant'),
+                field('accumulatedTradingVolume', 'tradingVolume'))
+            rows[row['date']] = row
+        except (ValueError, TypeError):
+            continue
+    if not rows:
+        raise ValueError('NAVER investor JSON has no valid foreign/institution net trades')
+    return [rows[d] for d in sorted(rows)]
+
+
+def parse_naver_page(markup):
+    """Recognize legacy 9-column and Npay 7-column investor tables."""
     soup = BeautifulSoup(markup, 'lxml')
     candidates = soup.find_all('table')
-    if not candidates:
-        title = (soup.title.get_text(' ', strip=True) if soup.title else '')[:90]
-        raise ValueError(f'NAVER no tables (blocked/changed); title={title!r}; html_bytes={len(markup)}')
-    result = []
     for table in candidates:
-        trs = table.find_all('tr')
-        heading = ' '.join(' '.join(cell.get_text(' ', strip=True) for cell in tr.find_all(['th'])) for tr in trs[:7])
-        heading = re.sub(r'\s+', '', heading)
-        # Disambiguation: NAVER foreign activity view, not ordinary price table.
-        if '외국인' not in heading or ('기관' not in heading and '순매매' not in heading):
+        headers = [re.sub(r'\s+', '', c.get_text(' ', strip=True)) for c in table.find_all('th')]
+        heading = ''.join(headers)
+        if '외국인' not in heading or '기관' not in heading:
             continue
-        for tr in trs:
+        npay = all(x in headers for x in ('날짜', '외국인', '기관', '종가'))
+        result = {}
+        for tr in table.find_all('tr'):
             cells = [c.get_text(' ', strip=True) for c in tr.find_all('td', recursive=False)]
-            if len(cells) < 9 or not re.fullmatch(r'\d{4}\.\d{2}\.\d{2}', cells[0]):
-                continue
             try:
-                # Original NAVER 9-column schema (date, close, change, %, volume,
-                # institution net, foreign net, foreign-held shares, foreign %).
-                day = cells[0].replace('.', '-')
-                close, net_shares, held, ownership = map(number, (cells[1], cells[6], cells[7], cells[8]))
-                if close <= 0 or held <= 0 or not .1 <= ownership <= 100 or not (-1e8 < net_shares < 1e8):
+                if npay and len(cells) == len(headers):
+                    get = lambda label: cells[headers.index(label)] if label in headers else None
+                    row = investor_row(get('날짜'), get('종가'), get('외국인'), get('기관'), get('개인'), get('거래량'))
+                elif len(cells) == 9 and '순매매' in heading and '보유' in heading:
+                    row = investor_row(cells[0], cells[1], cells[6], cells[5], volume=cells[4])
+                    held, ownership = number(cells[7]), number(cells[8])
+                    if held > 0 and .1 <= ownership <= 100:
+                        issued = held * 100 / ownership
+                        if 1e8 <= issued <= 2e9:
+                            row['market_cap_100m'] = round(row['close'] * issued / 1e8, 5)
+                else:
                     continue
-                issued = held * 100 / ownership
-                if not 1e8 <= issued <= 2e9:
-                    continue
-                result.append({'date': day,
-                    'foreign_net_100m': round(close * net_shares / 1e8, 5),
-                    'market_cap_100m': round(close * issued / 1e8, 5)})
-            except (ValueError, ZeroDivisionError, IndexError):
+                result[row['date']] = row
+            except (ValueError, TypeError, IndexError):
                 continue
         if result:
-            break
-    if not result:
-        title = (soup.title.get_text(' ', strip=True) if soup.title else '')[:80]
-        raise ValueError(f'NAVER foreign trades absent or unexpected schema; title={title!r}; tables={len(candidates)}')
-    return result
+            return [result[d] for d in sorted(result)]
+    # SPA shells have no table. Fail clearly so the JSON endpoint can be used.
+    raise ValueError(f'NAVER investor HTML has no supported net-trading table; tables={len(candidates)}')
 
 
 def foreign_flow(old_rows=None):
+    # Npay's legacy HTML URL now redirects to an SPA. Prefer structured data.
+    json_rows = {}
+    try:
+        for page in range(1, 4):
+            response = fetch('https://m.stock.naver.com/api/stock/000660/frgn',
+                             params={'pageSize': 40, 'page': page}, retries=2)
+            rows = parse_naver_json(response.json())
+            for row in rows:
+                json_rows[row['date']] = row
+            if len(json_rows) >= 20:
+                print('OK NAVER investor JSON', len(json_rows), 'latest', max(json_rows), flush=True)
+                return [json_rows[d] for d in sorted(json_rows)]
+    except Exception as exc:
+        print('WARN NAVER investor JSON:', type(exc).__name__, str(exc), flush=True)
     known = {x['date'] for x in (old_rows or []) if 'date' in x}
     max_pages = min(120, max(1, int(os.environ.get('NAVER_MAX_PAGES', '40' if len(known)<160 else '5'))))
     variants = [
@@ -187,7 +271,7 @@ def main():
         'flow': old.get('flow', []),
         'real_yield': old.get('real_yield', []),
         'source': {
-            'flow': 'NAVER Finance public page (not a supported API); estimated KRW amount = foreign net shares × daily close; estimated cap = foreign holding shares / holding ratio × close; NO LOGIN',
+            'flow': 'NAVER/Npay investor trend; foreign and institution daily NET shares (buy minus sell), not gross buying/selling; anonymous JSON with recognized HTML fallback. Amounts, if present, are shares times close estimates.',
             'real_yield': 'FRED DFII10; US 10-year TIPS real yield',
         },
         'errors': [],
@@ -200,10 +284,16 @@ def main():
             if len(rows) < (20 if key == 'flow' else 61):
                 raise ValueError(f'{key}: insufficient observations {len(rows)}')
             by_day = {x['date']: x for x in old.get(key, []) if 'date' in x}
-            by_day.update({x['date']: x for x in rows})
+            for row in rows:
+                by_day[row['date']] = {**by_day.get(row['date'], {}), **row}
             merged[key] = [by_day[d] for d in sorted(by_day)][-850:]
             successful += 1
             merged['source_status'][key]={'ok':True,'latest_date':merged[key][-1]['date'],'fetched_at':NOW.isoformat(), 'observations':len(merged[key])}
+            if key == 'flow':
+                merged['source_status'][key]['participants'] = {
+                    who: {'observations': sum(isinstance(x.get(who + '_net_shares'), (int, float)) for x in merged[key])}
+                    for who in ('foreign', 'institution')
+                }
             print(f'OK {key}: {len(merged[key])} dates; last {merged[key][-1]["date"]}', flush=True)
         except Exception as exc:
             error = f'{key}: {type(exc).__name__}: {exc}'

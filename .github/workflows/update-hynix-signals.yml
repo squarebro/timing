@@ -32,7 +32,7 @@ jobs:
         run: |
           echo "CHECKOUT_SHA=$(git rev-parse HEAD)"
           echo "COLLECTOR_SHA256=$(sha256sum update_hynix_signals.py)"
-          grep -n "HYNIX_COLLECTOR_VERSION\|2026-10-13-r4-schema-tests" update_hynix_signals.py || true
+          grep -n "HYNIX_COLLECTOR_VERSION\|2026-10-16-r5-foreign-institution" update_hynix_signals.py || true
 
       - name: Install dependencies
         run: |
@@ -43,18 +43,19 @@ jobs:
         run: |
           test -s data.json || { echo 'ERROR: data.json not found'; exit 1; }
           test -s update_hynix_signals.py || { echo 'ERROR: collector missing'; exit 1; }
-          grep -q '2026-10-13-r4-schema-tests' update_hynix_signals.py || {
-            echo 'ERROR: Old collector remains. Replace root/update_hynix_signals.py with r4 BEFORE running this workflow.'
+          grep -q '2026-10-16-r5-foreign-institution' update_hynix_signals.py || {
+            echo 'ERROR: Old collector remains. Replace root/update_hynix_signals.py with r5 BEFORE running this workflow.'
             exit 1
           }
-          echo 'Collector version verified: r4'
+          echo 'Collector version verified: r5'
 
       - name: Run offline parser and error-handling tests
         run: |
           test -f tests/test_hynix.py || { echo 'ERROR: tests/test_hynix.py missing'; exit 1; }
           python -m unittest discover -s tests -p 'test_hynix.py' -v
+          python -m unittest discover -s tests -p 'test_investor_flows.py' -v
 
-      - name: Fetch foreign investor flow and US real yield
+      - name: Fetch foreign/institution investor flow and US real yield
         id: collect
         env:
           NAVER_MAX_PAGES: '40'
@@ -77,6 +78,9 @@ jobs:
           for k in ('flow','real_yield'):
               x=s.get(k,{})
               lines.append(f"- **{k}**: {'OK' if x.get('ok') else 'FAILED / NOT COLLECTED'}; last data date: {x.get('latest_date','unknown')}")
+              if k == 'flow':
+                  for who, counts in x.get('participants',{}).items():
+                      lines.append(f"  - {who}: {counts.get('observations',0)} daily net-share observations")
               if x.get('error'): lines.append(f"  - error: `{str(x['error'])[:400]}`")
           out='\n'.join(lines)+'\n'
           print(out)
