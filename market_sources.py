@@ -43,10 +43,11 @@ def parse_naver_history(text):
         try:
             day = datetime.strptime(parts[0], "%Y%m%d").date().isoformat()
             high, low, close = map(float, (parts[2], parts[3], parts[4]))
+            volume = float(parts[5])
             if not valid_day(day) or not all(math.isfinite(v) and v > 0 for v in (high, low, close)) or not low <= close <= high:
                 continue
             t = int(datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=KST).timestamp() * 1000)
-            result[day] = {"t": t, "c": close, "h": high, "l": low}
+            result[day] = {"t": t, "c": close, "h": high, "l": low, "v": int(volume) if math.isfinite(volume) and volume > 0 and volume.is_integer() else None}
         except (ValueError, OverflowError):
             continue
     rows = [result[d] for d in sorted(result)]
