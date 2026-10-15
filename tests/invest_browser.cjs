@@ -30,7 +30,7 @@ const headers = {'access-control-allow-origin':'*'};
     if(proxy){target=new URL(proxy);proxyRequests++;}
     if(network==='offline'||(network==='proxy'&&!proxy))return route.fulfill({status:403,headers,body:'Blocked fixture'});
     if(target.hostname==='m.stock.naver.com'){
-     if(target.pathname.endsWith('/frgn'))return route.fulfill({headers,contentType:'application/json',body:JSON.stringify(investorRows().map(x=>({bizdate:x.date.replaceAll('-',''),foreignNetBuySell:String(x.foreign_net_shares),organNetBuySell:String(x.institution_net_shares),closePrice:String(x.close)})))});
+     if(target.pathname.endsWith('/integration'))return route.fulfill({headers,contentType:'application/json',body:JSON.stringify(investorRows().map(x=>({bizdate:x.date.replaceAll('-',''),foreignNetBuySell:String(x.foreign_net_shares),organNetBuySell:String(x.institution_net_shares),closePrice:String(x.close)})))});
      return route.fulfill({headers,contentType:'application/json',body:JSON.stringify(baseQuote)});
     }
     if(target.hostname==='fchart.stock.naver.com'){
@@ -116,6 +116,11 @@ const headers = {'access-control-allow-origin':'*'};
    const points=hyPoints(0,0,-.6,-1.2,null,null,null,100,100);
    return {row,rejected,score:points.score,weight:points.coverage};
   });assert.equal(v.row.foreign_net_shares,-1168078);assert.equal(v.row.institution_net_shares,206547);assert.equal(v.rejected,true);assert.equal(v.score,70);assert.equal(v.weight,100);
+ });
+ await scenario('five genuine days use a half-weight reference and do not invent 20-day totals',d=>{d.hynix_signals={flow:investorRows().slice(-5)};return d;},async p=>{
+  const v=await p.evaluate(()=>({f:hyInvestorSignal('foreign'),i:hyInvestorSignal('institution')}));
+  assert.equal(v.f.weight,5);assert.equal(v.i.weight,5);assert.equal(v.f.net20,null);assert.equal(v.f.history.length,5);assert.equal(v.i.score,100);
+  assert.match(await p.locator('#hyBreakdown').textContent(),/20일 이력 축적 중/);await hasScore(p);
  });
  console.log('Browser scenarios passed: '+passed);
  await browser.close();

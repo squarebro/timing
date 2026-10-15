@@ -122,7 +122,7 @@ def investor_row(day, close, foreign=None, institution=None, individual=None, vo
 
 
 def parse_naver_json(payload):
-    """NAVER's anonymous /api/stock/000660/frgn investor rows.
+    """NAVER's anonymous integration dealTrendInfos investor rows.
 
     Accept explicitly named net-trading fields only; held shares/ownership are
     distinct and must never be guessed as daily net buying.
@@ -190,26 +190,14 @@ def parse_naver_page(markup):
 
 
 def foreign_flow(old_rows=None):
-    # Npay's legacy HTML URL now redirects to an SPA. Prefer structured data.
-    json_rows, diagnostics = {}, []
+    # Verified Npay integration response currently supplies five daily rows.
+    # Retain daily observations across runs instead of inventing a 20-day series.
+    diagnostics = []
     try:
-        for page in range(1, 4):
-            response = fetch('https://m.stock.naver.com/api/stock/000660/frgn',
-                             params={'pageSize': 40, 'page': page}, retries=2)
-            rows = parse_naver_json(response.json())
-            for row in rows:
-                json_rows[row['date']] = row
-            if len(json_rows) >= 20:
-                print('OK NAVER investor JSON', len(json_rows), 'latest', max(json_rows), flush=True)
-                return [json_rows[d] for d in sorted(json_rows)]
-    except Exception as exc:
-        diagnostics.append(f'JSON: {type(exc).__name__}: {exc}')
-        print('WARN NAVER investor JSON:', type(exc).__name__, str(exc), flush=True)
-    # Some NAVER clients expose the same daily rows in the integration payload.
-    try:
-        response = fetch('https://m.stock.naver.com/api/stock/000660/integration', retries=1)
+        response = fetch('https://m.stock.naver.com/api/stock/000660/integration', retries=2)
         rows = parse_naver_json(response.json())
-        if len(rows) >= 20:
+        if len(rows) >= 5:
+            print('OK NAVER integration investor rows', len(rows), 'latest', rows[-1]['date'], flush=True)
             return rows
         diagnostics.append(f'integration: only {len(rows)} observations')
     except Exception as exc:
@@ -293,7 +281,7 @@ def main():
     for key, fn in [('flow', lambda: foreign_flow(old.get('flow', []))), ('real_yield', real_yield)]:
         try:
             rows = fn()
-            if len(rows) < (20 if key == 'flow' else 61):
+            if len(rows) < (5 if key == 'flow' else 61):
                 raise ValueError(f'{key}: insufficient observations {len(rows)}')
             by_day = {x['date']: x for x in old.get(key, []) if 'date' in x}
             for row in rows:

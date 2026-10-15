@@ -56,7 +56,7 @@ class InvestorFlowTests(unittest.TestCase):
             rows=m.foreign_flow([])
         self.assertEqual(len(rows),20)
         self.assertEqual(fetch.call_count,1)
-        self.assertIn('/api/stock/000660/frgn',fetch.call_args.args[0])
+        self.assertIn('/api/stock/000660/integration',fetch.call_args.args[0])
         self.assertEqual(rows[-1]['institution_net_shares'],50)
 
     def test_rows_are_deduplicated_and_sorted(self):
@@ -78,6 +78,14 @@ class InvestorFlowTests(unittest.TestCase):
             self.assertEqual(got['flow'][-1]['institution_net_shares'],20)
             self.assertEqual(got['flow'][-1]['foreign_net_shares'],-30)
             self.assertEqual(got['source_status']['flow']['participants']['institution']['observations'],20)
+
+    def test_verified_five_row_integration_is_accepted_without_fabrication(self):
+        response=Mock()
+        response.json.return_value={'dealTrendInfos':[{'bizdate':f'202610{i:02d}','foreignerPureBuyQuant':'-100','organPureBuyQuant':'+20'} for i in range(11,16)]}
+        with patch.object(m,'fetch',return_value=response):
+            rows=m.foreign_flow([])
+        self.assertEqual(len(rows),5)
+        self.assertEqual(rows[-1]['institution_net_shares'],20)
 
     def test_impossible_date_is_rejected(self):
         with self.assertRaises(ValueError):

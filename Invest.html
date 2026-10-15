@@ -522,17 +522,17 @@ button:disabled{opacity:.4;cursor:not-allowed}
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="hySave" style="flex:0 1 auto">외국인 수동값 저장·평가</button><button id="hyClear" class="ghost" style="flex:0 1 auto">수동값 제거·자동 전환</button></div></details>
   <details style="margin-top:12px;border-top:1px dotted var(--rule);padding-top:9px"><summary style="cursor:pointer;font-size:12px;font-weight:600">CSV 데이터 가져오기 · 자동수집 장애 시 대체 경로</summary>
-    <div class="hynix-note">자동 수집이 실패했을 때 <b>검증 가능한 실제 시계열 CSV</b>를 이 브라우저에만 저장합니다. 임의 데이터를 생성하지 않습니다. FRED에서 <b>DFII10 CSV</b>를 내려받아 선택할 수 있습니다. 수급 CSV는 <code>date,foreign_net_shares,institution_net_shares</code> 열을 사용합니다. (순매수 주수, 최소 20거래일; 일부 참여자 미확보는 빈칸). 종전 <code>foreign_net_100m,market_cap_100m</code> 형식도 외국인 수동 보완용으로 지원합니다.</div>
+    <div class="hynix-note">자동 수집이 실패했을 때 <b>검증 가능한 실제 시계열 CSV</b>를 이 브라우저에만 저장합니다. 임의 데이터를 생성하지 않습니다. FRED에서 <b>DFII10 CSV</b>를 내려받아 선택할 수 있습니다. 수급 CSV는 <code>date,foreign_net_shares,institution_net_shares</code> 열을 사용합니다. (순매수 주수, 최소 5거래일; 일부 참여자 미확보는 빈칸). 종전 <code>foreign_net_100m,market_cap_100m</code> 형식도 외국인 수동 보완용으로 지원합니다.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
       <label style="font-size:12px;flex:1 1 220px">미국 실질금리 DFII10 CSV<input type="file" id="hyRealCSV" accept=".csv,text/csv" style="display:block;margin-top:5px;max-width:100%"></label>
       <label style="font-size:12px;flex:1 1 220px">외국인·기관 일별 순매수 CSV<input type="file" id="hyFlowCSV" accept=".csv,text/csv" style="display:block;margin-top:5px;max-width:100%"></label>
       <button class="ghost" id="hyCSVClear" type="button" style="flex:0 1 auto">CSV 임시자료 제거</button>
     </div><div class="hynix-note" id="hyCSVStatus">CSV 대체자료 없음</div>
   </details>
-  <div class="hynix-note">자동 수급 점수 = 50 + 50 × [0.4 × 최근 5일(순매수 합 ÷ 일별 순매수 절대값 합) + 0.6 × 최근 20일 같은 비율]. 외국인과 기관을 각각 계산합니다. 모두 순매수이면 100, 모두 순매도이면 0, 실제 관측값이 모두 0이면 50입니다. 매수·매도가 상쇄될수록 50에 가까워집니다.</div>
-  <details style="margin-top:12px"><summary style="cursor:pointer;font-size:12px;font-weight:600">네이버 외국인·기관 일별 순매수 확인 (최근 20거래일)</summary>
+  <div class="hynix-note">자동 수급 점수 = 50 + 50 × [0.4 × 최근 5일(순매수 합 ÷ 일별 순매수 절대값 합) + 0.6 × 최근 20일 같은 비율]. 외국인과 기관을 각각 계산합니다. 모두 순매수이면 100, 모두 순매도이면 0, 실제 관측값이 모두 0이면 50입니다. 매수·매도가 상쇄될수록 50에 가까워집니다. 네이버가 제공하는 5일 자료만 있으면 5일 비율만 계산하고 해당 수급 비중을 10에서 5로 낮춥니다. 누적 이력이 20일 이상이면 5일·20일 혼합 및 비중 10을 적용합니다.</div>
+  <details style="margin-top:12px"><summary style="cursor:pointer;font-size:12px;font-weight:600">네이버 외국인·기관 일별 순매수 확인 (최대 20거래일)</summary>
     <div style="overflow-x:auto;margin-top:10px"><table style="width:100%;font-size:12px;text-align:right;border-collapse:collapse"><thead><tr><th>기준일</th><th>외국인</th><th>기관</th><th>개인</th><th>당일 종가</th></tr></thead><tbody id="hyInvestorRows"></tbody></table></div>
-    <div class="hynix-note">단위: 주. 양수=순매수, 음수=순매도, —=미확보. <a href="https://m.stock.naver.com/api/stock/000660/frgn?pageSize=40" target="_blank" rel="noopener">네이버 투자자 동향 원본(JSON)</a>. 보유율 증감을 순매수로 대체하지 않습니다.</div>
+    <div class="hynix-note">단위: 주. 양수=순매수, 음수=순매도, —=미확보. <a href="https://m.stock.naver.com/api/stock/000660/integration" target="_blank" rel="noopener">네이버 투자자 동향 원본(JSON)</a>. 보유율 증감을 순매수로 대체하지 않습니다.</div>
   </details>
   <div class="hynix-breakdown" id="hyBreakdown"></div>
   <div class="hynix-note" id="hyBacktest">백테스트: 국채금리 단독 규칙의 과거 자료 확인 중입니다.</div>
@@ -1033,14 +1033,13 @@ function publicNaver(text){
  throw Error('NAVER 외국인·기관 순매매 표 없음/형식 변경');
 }
 async function publicFlow(){
- let rows=[];
  try{
-  for(let page=1;page<=3&&rows.length<20;page++)rows=publicMerge(rows,await publicRead('https://m.stock.naver.com/api/stock/000660/frgn?pageSize=40&page='+page,publicInvestorJson),x=>x.date);
-  if(rows.length>=20)return rows;
- }catch(e){ /* 구조화된 원본 실패 시 인식 가능한 공개 HTML만 사용 */ }
- rows=[];
+  const rows=await publicRead('https://m.stock.naver.com/api/stock/000660/integration',publicInvestorJson);
+  if(rows.length>=5)return rows;
+ }catch(e){ /* 인식 가능한 공개 HTML만 대체 경로로 사용 */ }
+ let rows=[];
  for(let page=1;page<=3&&rows.length<20;page++)rows=publicMerge(rows,await publicRead('https://finance.naver.com/item/frgn.naver?code=000660&trader_day=1&page='+page,publicNaver),x=>x.date);
- if(rows.length<20)throw Error('NAVER 투자자 동향 20거래일 미만');
+ if(rows.length<5)throw Error('NAVER 투자자 동향 5거래일 미만');
  return rows;
 }
 
@@ -2081,7 +2080,7 @@ function hyCSVConvert(text,which){
    try{rows.push(publicInvestorRow(a[dateIx],closeIx>=0&&a[closeIx]!==''?a[closeIx]:null,foreignIx>=0?a[foreignIx]:null,institutionIx>=0?a[institutionIx]:null,individualIx>=0?a[individualIx]:null));}catch(e){}
   }
   const dedup=publicMerge([],rows,x=>x.date);
-  if(dedup.length<20)throw Error('수급 CSV는 유효 관측일 20개 이상 필요합니다.');
+  if(dedup.length<5)throw Error('수급 CSV는 유효 관측일 5개 이상 필요합니다.');
   return dedup;
  }
  const netIx=h.indexOf('foreign_net_100m'),capIx=h.indexOf('market_cap_100m');
@@ -2142,13 +2141,16 @@ function hyInvestorSignal(who){
  const name=who+'_net_shares',rows=DATA?.hynix_signals?.flow;
  if(!Array.isArray(rows))return null;
  const history=[...new Map(rows.filter(x=>x&&publicDay(x.date)).map(x=>[x.date,x])).values()].sort((a,b)=>a.date.localeCompare(b.date));
- const window=history.slice(-20);
- if(window.length<20||!hyValidAge(window.at(-1).date,7)||!window.every(x=>Number.isInteger(x[name])&&Math.abs(x[name])<1e8))return null;
+ const window=history.slice(-20),valid=x=>Number.isInteger(x[name])&&Math.abs(x[name])<1e8;
+ const short=window.slice(-5);
+ if(short.length<5||!hyValidAge(short.at(-1).date,7)||!short.every(valid))return null;
+ const full=window.length===20&&window.every(valid);
  const stats=arr=>({net:arr.reduce((s,x)=>s+x[name],0),absolute:arr.reduce((s,x)=>s+Math.abs(x[name]),0)});
- const five=stats(window.slice(-5)),twenty=stats(window);
+ const five=stats(short),twenty=full?stats(window):null;
  const balance=x=>x.absolute===0?0:x.net/x.absolute;
- return {who,date:window.at(-1).date,net5:five.net,net20:twenty.net,balance5:balance(five),balance20:balance(twenty),
-  score:clamp(50+50*(balance(five)*.4+balance(twenty)*.6),0,100),history:window,kind:DATA.hynix_signals._r5_flow?'사용자 CSV':'NAVER/Npay 순매수 주수'};
+ return {who,date:short.at(-1).date,net5:five.net,net20:twenty?twenty.net:null,balance5:balance(five),balance20:twenty?balance(twenty):null,
+  score:clamp(50+50*(full?balance(five)*.4+balance(twenty)*.6:balance(five)),0,100),weight:full?10:5,full,observations:window.filter(valid).length,history:window,
+  kind:DATA.hynix_signals._r5_flow?'사용자 CSV':'NAVER/Npay 순매수 주수'};
 }
 function hyInvestorTable(){
  const el=document.getElementById('hyInvestorRows');if(!el)return;
@@ -2175,15 +2177,15 @@ function hyRateValue(shortChange,longChange){
  return Number.isFinite(longChange)?short*.7+clamp(50-longChange/1.2*50,0,100)*.3:short;
 }
 // 기본 60:20:10:10. 누락한 입력에 중립값을 넣지 않고 실제 사용 가중치만 정규화한다.
-function hyPoints(n20,n60,r20,r60,flow5,flow20,cap,foreignScore=null,institutionScore=null){
+function hyPoints(n20,n60,r20,r60,flow5,flow20,cap,foreignScore=null,institutionScore=null,foreignWeight=10,institutionWeight=10){
  if(!Number.isFinite(n20))return null;
  const parts=[{key:'nominal',name:'미국 명목금리',weight:60,value:hyRateValue(n20,n60)}];
  if(Number.isFinite(r20))parts.push({key:'real',name:'미국 실질금리',weight:20,value:hyRateValue(r20,r60)});
  const validFlow=[flow5,flow20,cap].every(Number.isFinite)&&cap>0;
  const pct5=validFlow?flow5/cap*100:null,pct20=validFlow?flow20/cap*100:null;
- if(Number.isFinite(foreignScore))parts.push({key:'foreign',name:'외국인 수급',weight:10,value:clamp(foreignScore,0,100)});
+ if(Number.isFinite(foreignScore))parts.push({key:'foreign',name:'외국인 수급',weight:foreignWeight===5?5:10,value:clamp(foreignScore,0,100)});
  else if(validFlow)parts.push({key:'foreign',name:'외국인 수급',weight:10,value:clamp(50+pct5/.5*50,0,100)*.4+clamp(50+pct20/1.5*50,0,100)*.6});
- if(Number.isFinite(institutionScore))parts.push({key:'institution',name:'기관 수급',weight:10,value:clamp(institutionScore,0,100)});
+ if(Number.isFinite(institutionScore))parts.push({key:'institution',name:'기관 수급',weight:institutionWeight===5?5:10,value:clamp(institutionScore,0,100)});
  const coverage=parts.reduce((s,x)=>s+x.weight,0);
  return {score:Math.round(parts.reduce((s,x)=>s+x.value*x.weight,0)/coverage),coverage,pct5,pct20,parts};
 }
@@ -2232,7 +2234,7 @@ function hyRender(){
  const rawForeign=manual?null:hyInvestorSignal('foreign'),institution=hyInvestorSignal('institution');
  const candidate=manual?{...manual,kind:'수동 입력(시총비율 방식)'}:auto;
  const flow=candidate&&[candidate.flow5,candidate.flow20,candidate.cap].every(x=>hyNum(x)!==null&&Number.isFinite(hyNum(x)))&&Number(candidate.cap)>0&&hyValidAge(candidate.date,7)?candidate:null;
- const p=hyPoints(nominal.short,nominal.long,real?.short??null,real?.long??null,flow?Number(flow.flow5):null,flow?Number(flow.flow20):null,flow?Number(flow.cap):null,rawForeign?.score??null,institution?.score??null);
+ const p=hyPoints(nominal.short,nominal.long,real?.short??null,real?.long??null,flow?Number(flow.flow5):null,flow?Number(flow.flow20):null,flow?Number(flow.cap):null,rawForeign?.score??null,institution?.score??null,rawForeign?.weight??10,institution?.weight??10);
  const mode=p.parts.map(x=>`${x.name} ${(x.weight/p.coverage*100).toLocaleString('ko-KR',{maximumFractionDigits:1})}%`).join(' + ');
  document.getElementById('hyBuy').textContent=p.score+' / 100';
  document.getElementById('hySell').textContent=(100-p.score)+' / 100';
@@ -2244,11 +2246,12 @@ function hyRender(){
  const direction=p.score>=70?'매수 우호':p.score>=55?'매수 쪽 기울기':p.score>=45?'중립':p.score>=30?'매도 쪽 기울기':'매도 압력';
  document.getElementById('hyAction').textContent=`${direction} — 국채금리 변화 중심의 참고 점수입니다.`;
  const metric=(title,detail)=>`<div class="hynix-metric"><b>${title}</b>${detail}</div>`;
+ const flowDetail=x=>`5일 ${x.net5.toLocaleString('ko-KR')}주 / ${x.full?'20일 '+x.net20.toLocaleString('ko-KR')+'주':'20일 이력 축적 중 ('+x.observations+'/20): 5일 참조·절반 비중'} · ${x.date}`;
  const changes=w=>`20거래일 ${w.short.toFixed(2)}%p · `+(Number.isFinite(w.long)?`60거래일 ${w.long.toFixed(2)}%p`:'60거래일 이력 부족: 20거래일 변화만 반영');
  box.innerHTML=metric(`미국 명목 10년물 ${nominal.last.c.toFixed(2)}%`,changes(nominal)+' · '+nominal.date)+
   metric(real?`미국 실질 10년물 ${real.last.c.toFixed(2)}%`:'실질금리 미반영',real?changes(real)+' · '+real.date:'자료 미확보·지연 시 명목금리만으로 계산합니다.')+
-  metric(rawForeign?'외국인 수급 '+rawForeign.score.toFixed(1)+'/100':flow?'외국인 수급(시총비율 보완)':'외국인 수급 미반영',rawForeign?`5일 ${rawForeign.net5.toLocaleString('ko-KR')}주 / 20일 ${rawForeign.net20.toLocaleString('ko-KR')}주 · ${rawForeign.date}`:flow?`5일 ${Number(flow.flow5).toLocaleString('ko-KR')}억원 / 20일 ${Number(flow.flow20).toLocaleString('ko-KR')}억원 · ${flow.date}`:'자료 미확보·지연 시 국채금리 점수를 유지합니다.')+
-  metric(institution?'기관 수급 '+institution.score.toFixed(1)+'/100':'기관 수급 미반영',institution?`5일 ${institution.net5.toLocaleString('ko-KR')}주 / 20일 ${institution.net20.toLocaleString('ko-KR')}주 · ${institution.date}`:'기관 20거래일 자료가 없거나 오래되면 이 항목만 제외합니다.');
+  metric(rawForeign?'외국인 수급 '+rawForeign.score.toFixed(1)+'/100':flow?'외국인 수급(시총비율 보완)':'외국인 수급 미반영',rawForeign?flowDetail(rawForeign):flow?`5일 ${Number(flow.flow5).toLocaleString('ko-KR')}억원 / 20일 ${Number(flow.flow20).toLocaleString('ko-KR')}억원 · ${flow.date}`:'자료 미확보·지연 시 국채금리 점수를 유지합니다.')+
+  metric(institution?'기관 수급 '+institution.score.toFixed(1)+'/100':'기관 수급 미반영',institution?flowDetail(institution):'기관 5거래일 자료가 없거나 오래되면 이 항목만 제외합니다.');
  document.getElementById('hySource').textContent=`명목금리 ${hyNominalSource()} ${nominal.date}${real?' · 실질금리 FRED DFII10 '+real.date:''}${rawForeign?' · 외국인 '+rawForeign.kind+' '+rawForeign.date:flow?' · 외국인 '+flow.kind+' '+flow.date:''}${institution?' · 기관 '+institution.kind+' '+institution.date:''}. 일별 관측치 기준입니다. 자동 수급은 매수−매도의 순매수 주수이며, 총매수·총매도 거래대금과 다릅니다. 금리 하락을 우호적으로 평가하는 규칙이며 주가 상승 확률이 아닙니다.`;
  hyBacktestView();
 }
