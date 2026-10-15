@@ -32,6 +32,15 @@ class MarketSourcesTests(unittest.TestCase):
         self.assertEqual(rows[-1]['c'], 250500)
         self.assertEqual(datetime.fromtimestamp(rows[0]['t']/1000, timezone.utc).isoformat(), '2024-12-31T15:00:00+00:00')
         self.assertEqual(rows[0]['h'], 252000)
+        self.assertEqual(rows[-1]['v'], 100000)
+
+    def test_naver_history_unavailable_volume_is_not_invented(self):
+        from datetime import date, timedelta
+        days=[(date(2025, 1, 1)+timedelta(days=i)).strftime('%Y%m%d') for i in range(40)]
+        xml='<chartdata><chart>'+''.join(f'<item data="{d}|250000|252000|249000|250500|0"/>' for d in days)+'</chart></chartdata>'
+        rows=parse_naver_history(xml)
+        self.assertEqual(len(rows),40)
+        self.assertIsNone(rows[-1]['v'])
 
     def test_missing_fred_values_are_not_zero(self):
         text='observation_date,DGS10\n'+''.join(f'2025-01-{i:02d},4.1\n' for i in range(1, 25))+'2025-01-25,.\n2025-01-26,NaN\n2025-02-31,4.3\n'

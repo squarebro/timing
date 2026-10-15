@@ -43,7 +43,7 @@ ALL_SYMBOLS = sorted(set(TICKERS + AUX))
 
 
 def fetch_symbol(symbol, period="3y", retries=3):
-    """yfinance로 일봉을 받아 프런트에서 쓰는 {t,c,h,l} 형태로 변환."""
+    """yfinance 일봉을 {t,c,h,l,v} 형태로 변환. 거래량 부재 시 None(0으로 대체하지 않음)."""
     if symbol.endswith(('.KS', '.KQ')):
         try:
             rows = naver_history(symbol)
@@ -62,6 +62,7 @@ def fetch_symbol(symbol, period="3y", retries=3):
             rows = []
             for idx, row in df.iterrows():
                 c, h, l = row["Close"], row["High"], row["Low"]
+                raw_volume = row.get("Volume")
                 if any(v is None or v != v for v in (c, h, l)):  # NaN 체크
                     continue
                 t_ms = int(idx.timestamp() * 1000)
@@ -70,12 +71,13 @@ def fetch_symbol(symbol, period="3y", retries=3):
                     "c": round(float(c), 6),
                     "h": round(float(h), 6),
                     "l": round(float(l), 6),
+                    "v": int(raw_volume) if raw_volume is not None and raw_volume == raw_volume and float(raw_volume) > 0 else None,
                 })
 
             if len(rows) < 30:
                 raise ValueError(f"데이터 부족 ({len(rows)}행)")
 
-            return {"ok": True, "rows": rows, "count": len(rows), "source": "Yahoo adjusted daily OHLC"}
+            return {"ok": True, "rows": rows, "count": len(rows), "source": "Yahoo adjusted daily OHLCV"}
         except Exception as e:
             last_err = str(e)
             time.sleep(2 * (attempt + 1))
