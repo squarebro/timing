@@ -128,10 +128,11 @@ def parse_naver_json(payload):
     distinct and must never be guessed as daily net buying.
     """
     value = json.loads(payload) if isinstance(payload, str) else payload
+    root_keys = sorted(value) if isinstance(value, dict) else []
     if isinstance(value, dict):
         value = next((value[k] for k in ('dealTrendInfos', 'data', 'items') if isinstance(value.get(k), list)), None)
     if not isinstance(value, list):
-        raise ValueError('NAVER investor JSON list missing')
+        raise ValueError('NAVER investor JSON list missing; root keys=' + repr(root_keys))
     rows = {}
     for item in value:
         if not isinstance(item, dict):
@@ -148,7 +149,8 @@ def parse_naver_json(payload):
         except (ValueError, TypeError):
             continue
     if not rows:
-        raise ValueError('NAVER investor JSON has no valid foreign/institution net trades')
+        sample = value[0] if value else {}
+        raise ValueError('NAVER investor JSON has no valid net trades; first row=' + repr(sample)[:900])
     return [rows[d] for d in sorted(rows)]
 
 
@@ -189,7 +191,7 @@ def parse_naver_page(markup):
 
 def foreign_flow(old_rows=None):
     # Npay's legacy HTML URL now redirects to an SPA. Prefer structured data.
-    json_rows = {}
+    json_rows, diagnostics = {}, []
     try:
         for page in range(1, 4):
             response = fetch('https://m.stock.naver.com/api/stock/000660/frgn',
@@ -201,14 +203,24 @@ def foreign_flow(old_rows=None):
                 print('OK NAVER investor JSON', len(json_rows), 'latest', max(json_rows), flush=True)
                 return [json_rows[d] for d in sorted(json_rows)]
     except Exception as exc:
+        diagnostics.append(f'JSON: {type(exc).__name__}: {exc}')
         print('WARN NAVER investor JSON:', type(exc).__name__, str(exc), flush=True)
+    # Some NAVER clients expose the same daily rows in the integration payload.
+    try:
+        response = fetch('https://m.stock.naver.com/api/stock/000660/integration', retries=1)
+        rows = parse_naver_json(response.json())
+        if len(rows) >= 20:
+            return rows
+        diagnostics.append(f'integration: only {len(rows)} observations')
+    except Exception as exc:
+        diagnostics.append(f'integration: {type(exc).__name__}: {exc}')
     known = {x['date'] for x in (old_rows or []) if 'date' in x}
     max_pages = min(120, max(1, int(os.environ.get('NAVER_MAX_PAGES', '40' if len(known)<160 else '5'))))
     variants = [
         ('https://finance.naver.com/item/frgn.naver', {'code':'000660', 'trader_day':'1'}),
         ('https://finance.naver.com/item/frgn.naver', {'code':'000660'}),
     ]
-    all_rows, diagnostics = {}, []
+    all_rows = {}
     for url, base_params in variants:
         try:
             for page in range(1, max_pages+1):
