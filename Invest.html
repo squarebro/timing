@@ -532,7 +532,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
   <div class="hynix-note">자동 수급 점수 = 50 + 50 × [0.4 × 최근 5일(순매수 합 ÷ 일별 순매수 절대값 합) + 0.6 × 최근 20일 같은 비율]. 외국인과 기관을 각각 계산합니다. 모두 순매수이면 100, 모두 순매도이면 0, 실제 관측값이 모두 0이면 50입니다. 매수·매도가 상쇄될수록 50에 가까워집니다. 네이버가 제공하는 5일 자료만 있으면 5일 비율만 계산하고 해당 수급 비중을 10에서 5로 낮춥니다. 누적 이력이 20일 이상이면 5일·20일 혼합 및 비중 10을 적용합니다.</div>
   <details style="margin-top:12px"><summary style="cursor:pointer;font-size:12px;font-weight:600">네이버 외국인·기관 일별 순매수 확인 (최대 20거래일)</summary>
     <div style="overflow-x:auto;margin-top:10px"><table style="width:100%;font-size:12px;text-align:right;border-collapse:collapse"><thead><tr><th>기준일</th><th>외국인</th><th>기관</th><th>개인</th><th>당일 종가</th></tr></thead><tbody id="hyInvestorRows"></tbody></table></div>
-    <div class="hynix-note">단위: 주. 양수=순매수, 음수=순매도, —=미확보. <a href="https://m.stock.naver.com/api/stock/000660/integration" target="_blank" rel="noopener">네이버 투자자 동향 원본(JSON)</a>. 보유율 증감을 순매수로 대체하지 않습니다.</div>
+    <div class="hynix-note">단위: 주. 양수=순매수, 음수=순매도, —=미확보. 네이버 통합 조회(dealTrendInfos) 기준이며, 화면의 시장 구분·집계 시점에 따라 수치가 다를 수 있습니다. <a href="https://m.stock.naver.com/api/stock/000660/integration" target="_blank" rel="noopener">네이버 투자자 동향 원본(JSON)</a>. 보유율 증감을 순매수로 대체하지 않습니다.</div>
   </details>
   <div class="hynix-breakdown" id="hyBreakdown"></div>
   <div class="hynix-note" id="hyBacktest">백테스트: 국채금리 단독 규칙의 과거 자료 확인 중입니다.</div>
