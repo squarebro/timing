@@ -513,6 +513,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
     <div class="hynix-score"><div class="label">매도 적합도 · SELL</div><div class="number" id="hySell">—</div><div class="hint" id="hySellDesc">필요 데이터를 입력하면 계산됩니다.</div></div>
   </div>
   <div class="hynix-note" id="hyAutoStatus">자동 데이터 확인 중…</div>
+  <div class="hynix-note" id="liveStatus" role="status" aria-live="polite">저장 자료 표시 후 무료 소스 자동 조회 · 5분마다 갱신 · 수급·금리는 일별 발표 기준</div>
   <details style="margin-top:12px"><summary style="cursor:pointer;font-size:12px;font-weight:600">자동 수집 실패 시 수동 입력 / 덮어쓰기</summary><div class="hynix-inputs">
     <label>외국인 최근 5거래일 순매수 (억원)<input id="hyFlow5" type="number" step="any" placeholder="예: 1500 / -1500"></label>
     <label>외국인 최근 20거래일 순매수 (억원)<input id="hyFlow20" type="number" step="any" placeholder="예: 4000 / -4000"></label>
@@ -531,7 +532,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
   <div class="hynix-breakdown" id="hyBreakdown"></div>
   <div class="hynix-note" id="hyBacktest">백테스트: 과거 외국인 수급·실질금리 데이터 확인 중입니다.</div>
   <div class="hynix-action" id="hyAction">미국 국채금리와 외국인 수급 데이터가 필요합니다.</div>
-  <div class="hynix-note" id="hySource">미국 국채 명목금리는 기존 ^TNX, 실질금리는 FRED DFII10, 외국인 수급은 로그인 없는 네이버 금융의 순매수 수량×당일 종가로 추정합니다(정확한 체결대금 아님). 외부 수집 실패 시 마지막 자료를 최신으로 간주하지 않습니다.</div>
+  <div class="hynix-note" id="hySource">미국 국채 명목금리는 FRED DGS10(실패 시 ^TNX), 실질금리는 FRED DFII10, 외국인 수급은 로그인 없는 네이버 금융의 순매수 수량×당일 종가로 추정합니다(정확한 체결대금 아님). 외부 수집 실패 시 마지막 자료를 최신으로 간주하지 않습니다.</div>
   <div class="hynix-note"><b>주의:</b> 점수는 설명 가능한 휴리스틱이며 과거 수익률 예측력이나 승률이 검증된 모델이 아닙니다. <b>매도점수 = 100 − 매수점수</b>로 산출하며, 두 점수는 독립적인 예측 확률이 아닙니다. 입력값이 없거나 오래되면 점수를 표시하지 않습니다. 부채 상환용 확정 매도는 점수와 무관하게 처리하십시오. 네이버 금융 데이터는 공개 HTML 조회 방식으로 제공자가 구조를 변경할 수 있습니다. 실질금리 추가 점수는 사전 가설이고, 아래 검증은 수익성 보장을 뜻하지 않습니다.</div>
 </div>
 
@@ -539,7 +540,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 <div class="rows" id="rows"></div>
 
 <div class="controls">
-  <button id="btnRefresh">화면 다시 그리기</button>
+  <button id="btnRefresh">무료 소스 새로 조회</button>
   <button class="ghost" id="btnSort">점수순 정렬</button>
   <button class="ghost" id="btnExpand">전체 상세 펼치기</button>
 </div>
@@ -748,18 +749,24 @@ let DATA = null;
 let DATA_ERROR = null;
 let DATA_META = null;
 
+let DATA_LOADING = null;
 async function loadDataJson(){
-  if (DATA || DATA_ERROR) return;
-  try{
-    const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),15000);
-    const res=await fetch("./data.json?ts="+Date.now(), {signal:ctl.signal, cache:"no-store"});
-    clearTimeout(to);
-    if(!res.ok) throw new Error("HTTP "+res.status);
-    DATA = await res.json();
-    DATA_META = { generated_at: DATA.generated_at, failed: DATA.failed||[] };
-  }catch(e){
-    DATA_ERROR = String(e.message || e);
-  }
+  if(DATA || DATA_ERROR)return;
+  if(DATA_LOADING)return DATA_LOADING;
+  DATA_LOADING=(async()=>{
+    const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),15000);
+    try{
+      const res=await fetch('./data.json?ts='+Date.now(),{signal:ctl.signal,cache:'no-store'});
+      if(!res.ok)throw Error('HTTP '+res.status);
+      const value=await res.json();
+      if(!value || typeof value.series!=='object')throw Error('종목 데이터 형식 오류');
+      DATA=value;
+      DATA_META={generated_at:DATA.generated_at,failed:DATA.failed||[]};
+    }catch(e){DATA_ERROR=String(e.message||e);DATA={series:{},failed:[]};}
+    finally{clearTimeout(timer);}
+    publicRestore();
+  })();
+  return DATA_LOADING;
 }
 
 async function cryptoFG(){
@@ -836,44 +843,198 @@ async function loadTicker(t){
   return { rows, derived };
 }
 
-/* data.json에 없는 심볼(방금 추가한 사용자 종목 등)을 위한 실시간 폴백.
-   서버(GitHub Actions)는 브라우저의 localStorage를 알 수 없으므로,
-   사용자가 추가한 종목은 데이터 갱신을 아무리 돌려도 data.json에 절대 들어오지 않는다.
-   이 폴백이 없으면 그런 종목은 영원히 "데이터 대기 중"에 머문다. */
-const LIVE_FETCHERS = [
-  { name:"직접",       build:u=>u },
-  { name:"allorigins", build:u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u) },
-  { name:"corsproxy",  build:u=>"https://corsproxy.io/?url="+encodeURIComponent(u) },
-  { name:"codetabs",   build:u=>"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u) },
+/* 로그인/키 없는 공개 자료. 일봉·일별 확정치는 틱 실시간 자료가 아니다.
+   직접 CORS 요청을 우선하고, 실패하면 공개 CORS 중계로만 재시도한다.
+   중계 역시 가용성을 보장하지 않으므로 실패/관측일을 화면에 남긴다. */
+const PUBLIC_ROUTES = [
+  {name:'직접', build:u=>u},
+  {name:'allorigins', build:u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u)},
+  {name:'corsproxy', build:u=>'https://corsproxy.io/?url='+encodeURIComponent(u)},
+  {name:'codetabs', build:u=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u)},
 ];
+const PUBLIC_ROUTE_FAILURES = new Map(), PUBLIC_ROUTE_OK = new Map();
+const PUBLIC_CACHE_KEY = 'timingDesk.public.v1';
+let PUBLIC_STATE = {running:false, checked:null, errors:[], prices:0};
+const PUBLIC_OBSERVATIONS = {};
 const LIVE_CACHE = {};
 
-async function fetchLiveSeries(sym){
-  if (LIVE_CACHE[sym] !== undefined) return LIVE_CACHE[sym];
-  const url = "https://query1.finance.yahoo.com/v8/finance/chart/"
-    + encodeURIComponent(sym) + "?range=3y&interval=1d&includePrePost=false";
-  for (const f of LIVE_FETCHERS){
+async function publicRead(url, parse){
+  const host = new URL(url).hostname, errors=[];
+  const routes = [...PUBLIC_ROUTES].sort((a,b)=>Number(b.name===PUBLIC_ROUTE_OK.get(host))-Number(a.name===PUBLIC_ROUTE_OK.get(host)));
+  for(const route of routes){
+    const key=host+':'+route.name;
+    if(Date.now()-(PUBLIC_ROUTE_FAILURES.get(key)||0)<240000)continue;
+    const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),8000);
     try{
-      const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),15000);
-      const res=await fetch(f.build(url), {signal:ctl.signal, cache:"no-store"});
-      clearTimeout(to);
-      if(!res.ok) continue;
-      const j=await res.json();
-      const r = j?.chart?.result?.[0];
-      if(!r) continue;
-      const ts=r.timestamp||[], q=r.indicators.quote[0];
-      const adj=r.indicators.adjclose?.[0]?.adjclose;
-      const out=[];
-      for(let i=0;i<ts.length;i++){
-        const c=(adj&&adj[i]!=null)?adj[i]:q.close[i], h=q.high[i], l=q.low[i];
-        if(c==null||h==null||l==null) continue;
-        out.push({t:ts[i]*1000,c,h,l});
-      }
-      if(out.length>30){ LIVE_CACHE[sym]=out; return out; }
-    }catch(e){ /* 다음 경로 시도 */ }
+      const res=await fetch(route.build(url),{signal:ctl.signal,cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer'});
+      if(!res.ok)throw Error('HTTP '+res.status);
+      const bytes=await res.arrayBuffer();
+      // NAVER 원본은 EUC-KR, 일부 중계는 UTF-8로 변환한다.
+      let text=new TextDecoder('utf-8').decode(bytes);
+      if(host==='finance.naver.com' && !text.includes('외국인'))text=new TextDecoder('euc-kr').decode(bytes);
+      const value=parse(text); // 차단 HTML/빈 응답은 성공으로 저장하지 않는다.
+      PUBLIC_ROUTE_OK.set(host,route.name);
+      return value;
+    }catch(e){
+      // 스키마 실패는 그 중계의 모든 URL을 차단할 이유가 없다.
+      if(e instanceof TypeError || e.name==='AbortError' || /^HTTP /.test(e.message))PUBLIC_ROUTE_FAILURES.set(key,Date.now());
+      errors.push(route.name+': '+e.message);
+    }finally{clearTimeout(timer);}
   }
-  LIVE_CACHE[sym]=null;
-  return null;
+  throw Error(errors.join(' / ') || '최근 연결 실패; 다음 자동 갱신에서 재시도');
+}
+function publicDay(s){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;
+  const t=Date.parse(s+'T00:00:00Z');
+  return Number.isFinite(t)&&new Date(t).toISOString().slice(0,10)===s&&s<=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Seoul'});
+}
+function publicMerge(old, rows, key, limit=850){
+  return [...new Map([...(old||[]),...rows].map(x=>[key(x),x])).values()].sort((a,b)=>String(key(a)).localeCompare(String(key(b)))).slice(-limit);
+}
+function publicRestore(){
+  try{
+    const cache=JSON.parse(localStorage.getItem(PUBLIC_CACHE_KEY)||'null');
+    if(!cache || !DATA)return;
+    for(const [sym,rows] of Object.entries(cache.series||{})){
+      if(!Array.isArray(rows)||!rows.length||!rows.every(x=>Number.isFinite(x.t)&&Number.isFinite(x.c)&&x.c>0&&Number.isFinite(x.h)&&Number.isFinite(x.l)))continue;
+      const cachedTime=rows.at(-1).t,snapshotTime=DATA.series?.[sym]?.at(-1)?.t||0;
+      if(cachedTime>snapshotTime || (cachedTime===snapshotTime && (cache.saved_at||'')>(DATA.generated_at||''))){
+        DATA.series ||= {}; DATA.series[sym]=rows;
+      }
+    }
+    DATA.hynix_signals ||= {};
+    for(const name of ['flow','real_yield','nominal_yield']){
+      const rows=cache.signals?.[name];
+      if(!Array.isArray(rows)||!rows.length||!rows.every(x=>publicDay(x.date)&&
+        (name==='flow'?Number.isFinite(x.foreign_net_100m)&&Number.isFinite(x.market_cap_100m)&&x.market_cap_100m>0:Number.isFinite(x.value))))continue;
+      PUBLIC_OBSERVATIONS[name]=rows;
+      const current=DATA.hynix_signals[name];
+      DATA.hynix_signals[name]=(cache.saved_at||'')>(DATA.generated_at||'')?publicMerge(current,rows,x=>x.date):publicMerge(rows,current||[],x=>x.date);
+    }
+  }catch(e){ /* 저장 불가/잘못된 캐시는 무시하고 원본을 조회 */ }
+}
+function publicSave(){
+  try{localStorage.setItem(PUBLIC_CACHE_KEY,JSON.stringify({saved_at:new Date().toISOString(),series:DATA.series,signals:PUBLIC_OBSERVATIONS}));}catch(e){ /* 저장 용량 초과도 화면 조회는 유지 */ }
+}
+function publicYahoo(text){
+  const result=JSON.parse(text)?.chart?.result?.[0];
+  if(!result?.timestamp?.length)throw Error('Yahoo 시계열 없음');
+  const q=result.indicators?.quote?.[0],adj=result.indicators?.adjclose?.[0]?.adjclose;
+  if(!q)throw Error('Yahoo OHLC 없음');
+  const rows=[];
+  for(let i=0;i<result.timestamp.length;i++){
+    if(!Number.isFinite(result.timestamp[i]) || result.timestamp[i]*1000>Date.now()+86400000)continue;
+    const c=q.close[i],h=q.high[i],l=q.low[i],adjusted=adj?.[i]??c;
+    if(![c,h,l,adjusted].every(Number.isFinite)||c<=0||l<=0||h<l||adjusted<=0)continue;
+    const factor=adjusted/c;
+    rows.push({t:result.timestamp[i]*1000,c:adjusted,h:h*factor,l:l*factor});
+  }
+  if(rows.length<30)throw Error('Yahoo 유효 일봉 30개 미만');
+  return rows.sort((a,b)=>a.t-b.t);
+}
+async function fetchLiveSeries(sym){
+  if(LIVE_CACHE[sym]!==undefined)return LIVE_CACHE[sym];
+  try{
+    const end=Math.floor(Date.now()/1000),start=end-3*366*86400;
+    const url='https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(sym)+`?period1=${start}&period2=${end}&interval=1d&includePrePost=false`;
+    return LIVE_CACHE[sym]=await publicRead(url,publicYahoo);
+  }catch(e){return LIVE_CACHE[sym]=null;}
+}
+function publicNaver(text){
+  const doc=new DOMParser().parseFromString(text,'text/html'),rows=[];
+  const num=s=>{s=s.replace(/[,\s%+]/g,'');return /^-?\d+(\.\d+)?$/.test(s)?Number(s):NaN;};
+  for(const table of doc.querySelectorAll('table')){
+    const heading=[...table.querySelectorAll('th')].map(x=>x.textContent).join('').replace(/\s/g,'');
+    if(!heading.includes('외국인')||!heading.includes('기관')||!heading.includes('순매매')||!heading.includes('보유'))continue;
+    for(const tr of table.querySelectorAll('tr')){
+      const a=[...tr.children].filter(x=>x.tagName==='TD').map(x=>x.textContent.trim());
+      if(a.length!==9)continue;
+      const date=a[0].replace(/\./g,'-'),close=num(a[1]),net=num(a[6]),held=num(a[7]),pct=num(a[8]);
+      const issued=held*100/pct;
+      if(!publicDay(date)||![close,net,held,pct].every(Number.isFinite)||close<=0||held<=0||pct<.1||pct>100||Math.abs(net)>=1e8||issued<1e8||issued>2e9)continue;
+      rows.push({date,foreign_net_100m:close*net/1e8,market_cap_100m:close*issued/1e8});
+    }
+    if(rows.length)break;
+  }
+  if(!rows.length)throw Error('NAVER 외국인 순매매 표 없음/형식 변경');
+  return publicMerge([],rows,x=>x.date);
+}
+async function publicFlow(){
+  let rows=[];
+  // 점수에는 최소 20거래일이 필요하다. 긴 백테스트는 기존 수집 이력과 병합한다.
+  for(let page=1;page<=3&&rows.length<20;page++){
+    const url='https://finance.naver.com/item/frgn.naver?code=000660&trader_day=1&page='+page;
+    rows=publicMerge(rows,await publicRead(url,publicNaver),x=>x.date);
+  }
+  if(rows.length<20)throw Error('NAVER 외국인 순매매 20거래일 미만');
+  return rows;
+}
+function publicFred(text,code){
+  const parsed=hyCSVParse(text),d=parsed.headers.findIndex(x=>/^(date|observation_date)$/i.test(x)),v=parsed.headers.indexOf(code);
+  if(d<0||v<0)throw Error('FRED '+code+' CSV 열 없음');
+  const rows=parsed.values.filter(a=>publicDay(a[d])&&a[v]!==''&&a[v]!=='.'&&Number.isFinite(Number(a[v]))&&Number(a[v])>=-10&&Number(a[v])<=30).map(a=>({date:a[d],value:Number(a[v])}));
+  if(rows.length<61)throw Error('FRED '+code+' 유효 관측치 61개 미만');
+  return publicMerge([],rows,x=>x.date);
+}
+async function publicYield(code){
+  // 전체 수십 년 자료 대신 점수/기존 백테스트에 필요한 최근 5년을 요청한다.
+  const since=new Date(Date.now()-5*366*86400000).toISOString().slice(0,10);
+  const errors=[];
+  for(const host of ['fred.stlouisfed.org','research.stlouisfed.org']){
+    const path=host==='research.stlouisfed.org'?'/fred2/graph/fredgraph.csv':'/graph/fredgraph.csv';
+    try{return await publicRead(`https://${host}${path}?id=${code}&cosd=${since}`,text=>publicFred(text,code));}
+    catch(e){errors.push(e.message);}
+  }
+  throw Error(errors.join(' / '));
+}
+async function refreshPublicData(){
+  if(PUBLIC_STATE.running)return;
+  document.getElementById('btnRefresh').disabled=true;
+  PUBLIC_STATE={running:true,checked:null,errors:[],prices:0};
+  const note=document.getElementById('liveStatus');
+  note.textContent='무료 소스 자동 조회 중… 기존 자료를 먼저 표시합니다.';
+  await loadDataJson();
+  DATA ||= {series:{},failed:[]}; DATA.series ||= {}; DATA.hynix_signals ||= {};
+  for(const key of Object.keys(LIVE_CACHE))delete LIVE_CACHE[key];
+  const sig=DATA.hynix_signals;
+  sig.source_status ||= {};
+  const signal=async(name,fn)=>{
+    try{
+      const rows=await fn();
+      PUBLIC_OBSERVATIONS[name]=publicMerge(PUBLIC_OBSERVATIONS[name],rows,x=>x.date);
+      sig[name]=publicMerge(sig[name],rows,x=>x.date);
+      sig.source_status[name]={ok:true,latest_date:rows.at(-1).date};
+      delete sig['_r5_'+name];
+    }catch(e){
+      sig.source_status[name]={ok:false,error:e.message};
+      PUBLIC_STATE.errors.push(name==='flow'?'외국인 수급':name==='real_yield'?'실질금리':'명목금리');
+    }
+  };
+  // 대표 종목으로 연결 경로를 확인한 뒤 나머지는 네 개씩 제한하여 조회한다.
+  const prices=async()=>{
+    const symbols=[...new Set(['000660.KS',...Object.keys(DATA.series),...getActiveTickers().map(x=>x.sym)])].filter(x=>!KNOWN_MISSING.has(x));
+    const fetchOne=async sym=>{
+      const rows=await fetchLiveSeries(sym);
+      if(rows && (rows.at(-1).t>=(DATA.series[sym]?.at(-1)?.t||0))){
+        DATA.series[sym]=rows; PUBLIC_STATE.prices++;
+      }else PUBLIC_STATE.errors.push(sym);
+    };
+    await fetchOne(symbols.shift());
+    let index=0;
+    await Promise.all(Array.from({length:4},async()=>{while(index<symbols.length)await fetchOne(symbols[index++]);}));
+  };
+  try{
+    await Promise.all([prices(),signal('flow',publicFlow),signal('real_yield',()=>publicYield('DFII10')),signal('nominal_yield',()=>publicYield('DGS10'))]);
+    publicSave();
+  }finally{
+    document.getElementById('btnRefresh').disabled=false;
+    PUBLIC_STATE.running=false; PUBLIC_STATE.checked=new Date().toISOString();
+    const priceFailures=PUBLIC_STATE.errors.filter(x=>!['외국인 수급','실질금리','명목금리'].includes(x));
+    const failures=[...(priceFailures.length?['시세 '+priceFailures.length+'개']:[]),...PUBLIC_STATE.errors.filter(x=>!priceFailures.includes(x))];
+    note.textContent=`조회 확인 ${new Date().toLocaleTimeString('ko-KR')} · 시세 ${PUBLIC_STATE.prices}개 갱신 · 수급·금리는 일별 발표 자료, 시세는 지연될 수 있습니다.`+
+      (PUBLIC_STATE.errors.length?' · 조회 실패: '+failures.join(', ')+' — 마지막 자료의 기준일을 확인하십시오.':'');
+    note.title=PUBLIC_STATE.errors.join(', ')+'\n'+Object.values(sig.source_status).filter(x=>x?.error).map(x=>x.error).join('\n');
+  }
 }
 
 /* 야후에 애초에 존재하지 않아 라이브 조회를 시도할 필요조차 없는 심볼.
@@ -1698,6 +1859,7 @@ function renderRows(){
         <div class="nm">${R.name}</div><div class="sym">${R.sym}</div>
         <div class="px">${fmt(R.last,R.cur)}
           <span class="chg ${R.chgPct>=0?"up":"dn"}">${R.chgPct>=0?"+":""}${R.chgPct.toFixed(2)}%</span></div>
+        <div class="sym">일봉 기준 ${new Date(R.rows.at(-1).t).toLocaleDateString("ko-KR",{timeZone:R.sym.endsWith(".KS")||R.sym.endsWith(".KQ")?"Asia/Seoul":"America/New_York"})} · 지연 가능</div>
       </div>
       <div class="r-score"><div class="num" style="color:${col}">${s.total}</div><div class="of">/ 100</div></div>
       <div class="r-gauge"><div class="fader">
@@ -1863,7 +2025,7 @@ document.getElementById('hyCSVClear').addEventListener('click',()=>{localStorage
 // 수급은 네이버 공개 외국인 순매수 수량×당일 종가로 추정한 거래대금(억원); 음수=순매도. 시총 역시 해당 일의 외국인 보유수량·보유율·종가로 추정합니다. 자동 수급 기준이 7일 넘으면 계산하지 않습니다.
 const hyDay = d => new Date(d+"T00:00:00").getTime();
 const hyISO = t => new Date(t).toISOString().slice(0,10);
-function hyAge(date){ return Math.round((new Date().setHours(0,0,0,0)-hyDay(date))/86400000); }
+function hyAge(date){const today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Seoul'});return Math.round((hyDay(today)-hyDay(date))/86400000);}
 function hyValidAge(date,max){let n=hyAge(date);return Number.isFinite(n)&&n>=0&&n<=max;}
 function hyLastN(arr,n){return arr.slice(-n).reduce((a,b)=>a+b.foreign_net_100m,0);}
 function hyGetAuto(){
@@ -1874,7 +2036,14 @@ function hyGetAuto(){
  const last=flow[flow.length-1];
  return {flow5:hyLastN(flow,5),flow20:hyLastN(flow,20),cap:last.market_cap_100m,date:last.date,kind:sig._r5_flow?"사용자 CSV(검증 필요)":"자동(NAVER·추정금액)",history:flow};
 }
-function hyNominalRows(){const y=DATA?.series?.["^TNX"];return Array.isArray(y)?y:[];}
+function hyNominalRows(){
+ const fred=DATA?.hynix_signals?.nominal_yield;
+ const y=DATA?.series?.['^TNX'];
+ const fallback=Array.isArray(y)?y:[];
+ const rows=Array.isArray(fred)?fred.filter(x=>publicDay(x.date)&&Number.isFinite(x.value)):[];
+ if(rows.length>=61 && rows.at(-1).date>=hyISO(fallback.at(-1)?.t||0))return rows.map(x=>({t:Date.parse(x.date+'T12:00:00Z'),c:x.value}));
+ return fallback;
+}
 function hyRealRows(){
  const r=DATA?.hynix_signals?.real_yield;
  return Array.isArray(r)?r.filter(x=>x&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)&&Number.isFinite(x.value)).sort((a,b)=>a.date.localeCompare(b.date)):[];
@@ -1918,19 +2087,23 @@ function hyRender(){
  const y=hyNominalRows(), r=hyRealRows(), auto=hyGetAuto(),manual=hyRead();
  const status=document.getElementById("hyAutoStatus"),box=document.getElementById("hyBreakdown");box.innerHTML="";
  const flow=manual ? {...manual,kind:"수동 입력"} : auto;
- status.textContent=manual?"수동 입력이 자동 데이터를 덮어쓰고 있습니다. '수동값 제거·자동 전환'을 누르면 복귀합니다.":auto?`외국인 수급 ${auto.kind}: ${auto.date} · ${hyValidAge(auto.date,7)?"최신":"오래된 데이터(점수 중단)"}`:"자동 수급 미수집. data.json에 hynix_signals.flow가 없거나 수집에 실패했습니다. 수동 입력은 접힌 항목에서 가능합니다.";
+ status.textContent=manual?"수동 입력이 자동 데이터를 덮어쓰고 있습니다. '수동값 제거·자동 전환'을 누르면 복귀합니다.":auto?`외국인 수급 ${auto.kind}: ${auto.date} · ${hyValidAge(auto.date,7)?"최신":"오래된 데이터(점수 중단)"}`:"외국인 수급 자료 없음. 무료 소스 자동 조회 결과를 아래에서 확인하십시오. 수동 입력·CSV도 사용할 수 있습니다.";
  const srcState=DATA?.hynix_signals?.source_status;
  const srcErrors=DATA?.hynix_signals?.errors;
  if(srcState && Object.values(srcState).some(x=>x && x.ok===false)) {
-  const failures=Object.entries(srcState).filter(([k,v])=>v?.ok===false).map(([k,v])=>k==='flow'?'외국인 수급':'미국 실질금리');
+  const failures=Object.entries(srcState).filter(([k,v])=>v?.ok===false).map(([k,v])=>k==='flow'?'외국인 수급':k==='nominal_yield'?'미국 명목금리':'미국 실질금리');
   status.textContent += ` · 자동 소스 오류 기록: ${failures.join(', ')} (마지막 성공 데이터 날짜 확인 필요)`;
  }
  if(Array.isArray(srcErrors)&&srcErrors.length) status.title=srcErrors.join(' | ');
 
- const fail=m=>{hyMarkMissing(m);hyBacktestView();};
- if(y.length<61)return fail("^TNX 명목 국채금리 61거래일 이상 데이터가 필요합니다.");
- if(r.length<61)return fail("실질금리(FRED DFII10) 데이터가 없어 점수를 산출하지 않습니다. data.json 갱신을 확인하십시오.");
- if(!flow || [flow.flow5,flow.flow20,flow.cap].some(x=>!Number.isFinite(Number(x))) || Number(flow.cap)<=0||!flow.date)return fail("외국인 순매수 최신 데이터를 자동으로 받지 못했습니다. 수동 입력 또는 GitHub Actions를 확인하십시오.");
+ const fail=m=>{
+  hyMarkMissing(m);
+  document.getElementById('hySource').textContent=`자료 기준일 — 외국인 수급 ${auto?.date||'없음'} · 명목금리 ${y.length?hyISO(y.at(-1).t):'없음'} · 실질금리 ${r.at(-1)?.date||'없음'}. 수급·금리는 일별 발표 자료이며 오래된 값으로 점수를 만들지 않습니다.`;
+  hyBacktestView();
+ };
+ if(y.length<61)return fail("미국 명목 국채금리(DGS10 또는 ^TNX) 61거래일 이상 데이터가 필요합니다.");
+ if(r.length<61)return fail("실질금리(FRED DFII10) 자료가 부족합니다. 자동 조회 중이거나 소스 연결이 실패했습니다. 아래 조회 상태를 확인하십시오.");
+ if(!flow || [flow.flow5,flow.flow20,flow.cap].some(x=>!Number.isFinite(Number(x))) || Number(flow.cap)<=0||!flow.date)return fail("외국인 순매수 자료가 부족합니다. 아래 자동 조회 상태를 확인하거나 수동 입력·CSV를 사용하십시오.");
  if(!hyValidAge(flow.date,7))return fail("외국인 수급이 7일 이상 오래됐습니다. 낡은 값으로 매매점수를 만들지 않습니다.");
  const last=y[y.length-1],yn=y[y.length-21],yo=y[y.length-61],rr=r[r.length-1],rn=r[r.length-21],ro=r[r.length-61];
  if(![last,yn,yo,rr,rn,ro].every(Boolean))return fail("금리 데이터 결측으로 계산이 불가능합니다.");
@@ -1961,12 +2134,15 @@ document.getElementById("hyClear").addEventListener("click",()=>{
 hyPopulate();
 
 /* ═══════════ 실행 ═══════════ */
-async function run(forceReload){
+async function renderDashboard(forceReload){
   const btn=document.getElementById("btnRefresh"); btn.disabled=true;
   document.getElementById("errbox").innerHTML="";
   document.getElementById("st-state").textContent="계산 중";
   document.getElementById("status").textContent="공포탐욕지수 계산 중…";
-  if(forceReload){ DATA=null; DATA_ERROR=null; DATA_META=null; }
+  if(forceReload){
+    DATA=null; DATA_ERROR=null; DATA_META=null; DATA_LOADING=null;
+    await refreshPublicData();
+  }
 
   const G=await computeFG();
   renderFG(G);
@@ -2022,12 +2198,12 @@ async function run(forceReload){
   const now=new Date();
   document.getElementById("allocDate").textContent =
     now.toLocaleDateString("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit"}) + " 기준";
-  document.getElementById("st-state").textContent = fails?`일부 실패 (${fails}/${ACTIVE.length})`:"최신";
+  document.getElementById("st-state").textContent = fails?`일부 실패 (${fails}/${ACTIVE.length})`:"계산 완료 · 자료 기준일 확인";
   document.getElementById("st-time").textContent =
     now.toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
   document.getElementById("st-src").textContent =
     DATA_META && DATA_META.generated_at
-      ? "데이터 기준 " + new Date(DATA_META.generated_at).toLocaleString("ko-KR",
+      ? "저장 자료 " + new Date(DATA_META.generated_at).toLocaleString("ko-KR",
           {month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})
       : "데이터 시각 확인 불가";
 
@@ -2037,7 +2213,7 @@ async function run(forceReload){
     ? `계산 완료 · 현재 최고 점수는 <b>${best.name} ${best.score.total}점</b>입니다. 행을 누르면 근거가 펼쳐집니다.`
     : "계산할 수 있는 종목이 없습니다.";
 
-  if(DATA_ERROR){
+  if(DATA_ERROR && !Object.keys(DATA?.series||{}).length){
     document.getElementById("errbox").innerHTML=
       `<div class="err"><b>data.json을 불러오지 못했습니다.</b><br>
        (${DATA_ERROR})<br><br>
@@ -2059,7 +2235,7 @@ async function run(forceReload){
       // 합성 계산으로 해결되는 심볼(예: CNYKRW=X → KRW=X÷CNY=X)은 그 자체로는
       // series()에서 실패해도 결과에 영향이 없으므로 제외한다.
       const t = ACTIVE.find(x=>x.sym===sym);
-      if(t && t.synth && shownOk.has(sym)) return false;
+      if(shownOk.has(sym) || (DATA?.series?.[sym]?.length && LIVE_CACHE[sym])) return false;
       // 보조지표용 심볼(AUX)이면서 관련 화면 항목이 이미 정상이면 실제 영향 없음
       return true;
     });
@@ -2215,7 +2391,17 @@ document.getElementById("tmReset").addEventListener("click", ()=>{
 });
 
 renderTickerManager();
-run();
+let RUN_PENDING=null;
+function run(forceReload){
+  if(RUN_PENDING)return RUN_PENDING;
+  if(PUBLIC_STATE.running)return Promise.resolve();
+  RUN_PENDING=renderDashboard(forceReload).catch(e=>{
+    document.getElementById('liveStatus').textContent='갱신 오류: '+e.message+' · 잠시 후 다시 조회하십시오.';
+  }).finally(()=>{RUN_PENDING=null;document.getElementById('btnRefresh').disabled=false;});
+  return RUN_PENDING;
+}
+run().then(async()=>{await refreshPublicData();await run();});
+setInterval(()=>{if(!document.hidden&&!RUN_PENDING)run(true);},5*60*1000);
 </script>
 </body>
 </html>
