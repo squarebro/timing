@@ -13,6 +13,9 @@ import json
 import time
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
+
+from market_sources import naver_history, naver_quote, fred_series
 
 import yfinance as yf
 
@@ -41,6 +44,12 @@ ALL_SYMBOLS = sorted(set(TICKERS + AUX))
 
 def fetch_symbol(symbol, period="3y", retries=3):
     """yfinance로 일봉을 받아 프런트에서 쓰는 {t,c,h,l} 형태로 변환."""
+    if symbol.endswith(('.KS', '.KQ')):
+        try:
+            rows = naver_history(symbol)
+            return {"ok": True, "rows": rows, "count": len(rows), "source": "NAVER daily OHLC"}
+        except Exception as exc:
+            print(f"[NAVER history unavailable: {type(exc).__name__}]", end=" ", flush=True)
     last_err = None
     for attempt in range(retries):
         try:
@@ -66,7 +75,7 @@ def fetch_symbol(symbol, period="3y", retries=3):
             if len(rows) < 30:
                 raise ValueError(f"데이터 부족 ({len(rows)}행)")
 
-            return {"ok": True, "rows": rows, "count": len(rows)}
+            return {"ok": True, "rows": rows, "count": len(rows), "source": "Yahoo adjusted daily OHLC"}
         except Exception as e:
             last_err = str(e)
             time.sleep(2 * (attempt + 1))
@@ -147,7 +156,12 @@ def fetch_crypto_fg():
 
 def main():
     print(f"yfinance {yf.__version__} · 수집 대상 {len(ALL_SYMBOLS)}개 심볼\n")
-    series = {}
+    path = Path('data.json')
+    previous = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
+    series = dict(previous.get('series') or {})
+    quotes = dict(previous.get('quotes') or {})
+    series_status = dict(previous.get('series_status') or {})
+    checked_at = datetime.now(timezone.utc).isoformat()
     failed = []
 
     for sym in ALL_SYMBOLS:
@@ -155,11 +169,29 @@ def main():
         r = fetch_symbol(sym)
         if r["ok"]:
             series[sym] = r["rows"]
+            series_status[sym] = {"ok": True, "source": r.get('source'), "fetched_at": checked_at}
             print(f"OK  ({r['count']}행)")
         else:
             failed.append(sym)
+            series_status[sym] = {"ok": False, "error": r.get('error'), "checked_at": checked_at, "retained": bool(series.get(sym))}
             print(f"실패 — {r['error']}")
         time.sleep(0.6)
+
+    for sym in [x for x in TICKERS if x.endswith(('.KS', '.KQ'))]:
+        try:
+            quotes[sym] = naver_quote(sym)
+            print(f"QUOTE {sym}: {quotes[sym]['price']} at {quotes[sym]['observed_at']}")
+        except Exception as exc:
+            print(f"QUOTE {sym} unavailable: {type(exc).__name__}: {exc}; retained previous quote")
+
+    signals = dict(previous.get('hynix_signals') or {})
+    status = dict(signals.get('source_status') or {})
+    try:
+        signals['nominal_yield'] = fred_series('DGS10')
+        status['nominal_yield'] = {'ok': True, 'latest_date': signals['nominal_yield'][-1]['date'], 'fetched_at': checked_at}
+    except Exception as exc:
+        status['nominal_yield'] = {'ok': False, 'error': str(exc), 'checked_at': checked_at}
+    signals['source_status'] = status
 
     print("\n크립토 공포탐욕지수 ...", end=" ", flush=True)
     cfg = fetch_crypto_fg()
@@ -174,19 +206,24 @@ def main():
         "nasdaq": NASDAQ_SEASONALITY_QQQ,
     }
 
-    payload = {
+    payload = {**previous,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "symbols": ALL_SYMBOLS,
         "failed": failed,
         "series": series,
+        "series_status": series_status,
+        "quotes": quotes,
+        "hynix_signals": signals,
         "crypto_fg": cfg,
         "seasonality": seasonality,
     }
 
-    with open("data.json", "w", encoding="utf-8") as f:
+    with path.with_suffix(".json.tmp").open("w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
 
-    ok_n = len(series)
+    path.with_suffix(".json.tmp").replace(path)
+
+    ok_n = len(ALL_SYMBOLS) - len(failed)
     print(f"\n완료: {ok_n}/{len(ALL_SYMBOLS)}개 성공")
     if failed:
         print("실패 목록:", ", ".join(failed))

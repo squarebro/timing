@@ -505,9 +505,9 @@ button:disabled{opacity:.4;cursor:not-allowed}
 <div class="macro-note" id="macroNote">불러오는 중입니다.</div>
 
 
-<div class="sec"><span class="n">05-A</span><h2>SK하이닉스 · 미국 국채금리 × 외국인 수급 타이밍</h2><div class="ln"></div></div>
+<div class="sec"><span class="n">05-A</span><h2>SK하이닉스 · 미국 국채금리 중심 타이밍</h2><div class="ln"></div></div>
 <div class="hynix-wrap">
-  <div style="font-size:12px;line-height:1.7;color:var(--ink-2)">미 국채 명목금리(20점) · 미국 10년 실질금리(20점) · SK하이닉스 외국인 순매수(60점)를 결합합니다. <b>자동 데이터 우선, 수동 입력은 대체 수단</b>이며, 과거 시계열을 확보할 때만 검증 통계를 계산합니다.</div>
+  <div style="font-size:12px;line-height:1.7;color:var(--ink-2)">미국 10년 국채금리를 기본으로 계산합니다. 기본 가중치는 <b>명목금리 70 · 실질금리 20 · 외국인 수급 10</b>이며, 보완 자료가 없으면 제외하고 남은 가중치를 100으로 환산합니다. <b>명목금리만 있어도 계산</b>하며, 금리 하락을 매수 우호적으로 평가합니다.</div>
   <div class="hynix-scores">
     <div class="hynix-score"><div class="label">매수 적합도 · BUY</div><div class="number" id="hyBuy">—</div><div class="hint" id="hyBuyDesc">필요 데이터를 입력하면 계산됩니다.</div></div>
     <div class="hynix-score"><div class="label">매도 적합도 · SELL</div><div class="number" id="hySell">—</div><div class="hint" id="hySellDesc">필요 데이터를 입력하면 계산됩니다.</div></div>
@@ -533,7 +533,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
   <div class="hynix-note" id="hyBacktest">백테스트: 과거 외국인 수급·실질금리 데이터 확인 중입니다.</div>
   <div class="hynix-action" id="hyAction">미국 국채금리와 외국인 수급 데이터가 필요합니다.</div>
   <div class="hynix-note" id="hySource">미국 국채 명목금리는 FRED DGS10(실패 시 ^TNX), 실질금리는 FRED DFII10, 외국인 수급은 로그인 없는 네이버 금융의 순매수 수량×당일 종가로 추정합니다(정확한 체결대금 아님). 외부 수집 실패 시 마지막 자료를 최신으로 간주하지 않습니다.</div>
-  <div class="hynix-note"><b>주의:</b> 점수는 설명 가능한 휴리스틱이며 과거 수익률 예측력이나 승률이 검증된 모델이 아닙니다. <b>매도점수 = 100 − 매수점수</b>로 산출하며, 두 점수는 독립적인 예측 확률이 아닙니다. 입력값이 없거나 오래되면 점수를 표시하지 않습니다. 부채 상환용 확정 매도는 점수와 무관하게 처리하십시오. 네이버 금융 데이터는 공개 HTML 조회 방식으로 제공자가 구조를 변경할 수 있습니다. 실질금리 추가 점수는 사전 가설이고, 아래 검증은 수익성 보장을 뜻하지 않습니다.</div>
+  <div class="hynix-note"><b>주의:</b> 점수는 설명 가능한 휴리스틱이며 과거 수익률 예측력이나 승률이 검증된 모델이 아닙니다. <b>매도점수 = 100 − 매수점수</b>로 산출하며, 두 점수는 독립적인 예측 확률이 아닙니다. 기본 명목금리가 없거나 오래되면 계산을 보류합니다. 보완 입력이 누락되면 해당 입력을 제외합니다. 부채 상환용 확정 매도는 점수와 무관하게 처리하십시오. 네이버 금융 데이터는 공개 HTML 조회 방식으로 제공자가 구조를 변경할 수 있습니다. 국채금리 하락을 우호적으로 평가하는 가설이며, 국채금리 단독 과거 검증은 보완 모드와 구별합니다.</div>
 </div>
 
 <div class="sec"><span class="n">06</span><h2>종목별 매수 적합도 &amp; 웅줍 포인트</h2><div class="ln"></div></div>
@@ -593,7 +593,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 </details>
 
 <div class="foot">
-  <b>하이닉스 수급·금리 전용 점수</b> — 미 명목 10년물 20일 변화 14점·60일 변화 6점, 10년 실질금리 20일 변화 14점·60일 변화 6점, 하이닉스 외국인 최근 5일 순매수 24점·20일 누적 순매수 36점. 외국인 순매수는 시가총액 대비 비율로 표준화합니다. 별도 데이터가 없으면 점수를 산출하지 않습니다.<br>
+  <b>하이닉스 금리 중심 점수</b> — 기본 가중치: 명목금리 70 · 실질금리 20 · 외국인 수급 10. 금리는 20거래일 변화 70%·60거래일 변화 30%를 평가하며, 60일 이력이 없으면 20일 변화만 사용합니다. 확보된 보완 입력만 가중치를 정규화하여 합칩니다. 수급·실질금리 누락은 명목금리 단독 계산을 막지 않습니다.<br>
   <b>기존 종목별 점수 산식 (100점)</b> — 스토캐스틱 5/10/20 종합 32 · 3년 가격 위치 16 · RSI(14) 10 ·
   200일선 이격 12 · 매크로 12 · 공포탐욕 18.<br>
   <b>웅줍 포인트 산정</b> — 이동평균선(20/60/120/240일선)과 현재 종가 위치를 비교하여 웅줍 단계(1~4차)를 계산합니다.<br>
@@ -853,7 +853,7 @@ const PUBLIC_ROUTES = [
   {name:'codetabs', build:u=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u)},
 ];
 const PUBLIC_ROUTE_FAILURES = new Map(), PUBLIC_ROUTE_OK = new Map();
-const PUBLIC_CACHE_KEY = 'timingDesk.public.v1';
+const PUBLIC_CACHE_KEY = 'timingDesk.public.v2';
 let PUBLIC_STATE = {running:false, checked:null, errors:[], prices:0};
 const PUBLIC_OBSERVATIONS = {};
 const LIVE_CACHE = {};
@@ -870,8 +870,9 @@ async function publicRead(url, parse){
       if(!res.ok)throw Error('HTTP '+res.status);
       const bytes=await res.arrayBuffer();
       // NAVER 원본은 EUC-KR, 일부 중계는 UTF-8로 변환한다.
-      let text=new TextDecoder('utf-8').decode(bytes);
-      if(host==='finance.naver.com' && !text.includes('외국인'))text=new TextDecoder('euc-kr').decode(bytes);
+      let text;
+      try{text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);}
+      catch(e){text=new TextDecoder('euc-kr').decode(bytes);}
       const value=parse(text); // 차단 HTML/빈 응답은 성공으로 저장하지 않는다.
       PUBLIC_ROUTE_OK.set(host,route.name);
       return value;
@@ -902,6 +903,10 @@ function publicRestore(){
         DATA.series ||= {}; DATA.series[sym]=rows;
       }
     }
+    DATA.quotes ||= {};
+    for(const [sym,q] of Object.entries(cache.quotes||{})){
+      if(Number.isFinite(q?.price)&&q.price>0&&Number.isFinite(Date.parse(q.observed_at))&&Date.parse(q.observed_at)>Date.parse(DATA.quotes[sym]?.observed_at||'1970-01-01'))DATA.quotes[sym]=q;
+    }
     DATA.hynix_signals ||= {};
     for(const name of ['flow','real_yield','nominal_yield']){
       const rows=cache.signals?.[name];
@@ -914,7 +919,7 @@ function publicRestore(){
   }catch(e){ /* 저장 불가/잘못된 캐시는 무시하고 원본을 조회 */ }
 }
 function publicSave(){
-  try{localStorage.setItem(PUBLIC_CACHE_KEY,JSON.stringify({saved_at:new Date().toISOString(),series:DATA.series,signals:PUBLIC_OBSERVATIONS}));}catch(e){ /* 저장 용량 초과도 화면 조회는 유지 */ }
+  try{localStorage.setItem(PUBLIC_CACHE_KEY,JSON.stringify({saved_at:new Date().toISOString(),series:DATA.series,signals:PUBLIC_OBSERVATIONS,quotes:DATA.quotes||{}}));}catch(e){ /* 저장 용량 초과도 화면 조회는 유지 */ }
 }
 function publicYahoo(text){
   const result=JSON.parse(text)?.chart?.result?.[0];
@@ -932,9 +937,41 @@ function publicYahoo(text){
   if(rows.length<30)throw Error('Yahoo 유효 일봉 30개 미만');
   return rows.sort((a,b)=>a.t-b.t);
 }
+function publicQuote(text,sym){
+ const q=JSON.parse(text),price=Number(String(q.closePrice||'').replace(/,/g,''));
+ const observed_at=q.localTradedAt,instant=Date.parse(observed_at);
+ if(String(q.itemCode||q.stockId||sym.split('.')[0])!==sym.split('.')[0]||!Number.isFinite(price)||price<=0||!Number.isFinite(instant)||instant>Date.now()+300000)throw Error('NAVER 시세 또는 관측 시각 오류');
+ const day=new Date(instant).toLocaleDateString('en-CA',{timeZone:'Asia/Seoul'});
+ if(!publicDay(day))throw Error('NAVER 시세 기준일 오류');
+ const ratio=q.fluctuationsRatio==null?null:Number(String(q.fluctuationsRatio).replace(/[% ,]/g,''));
+ return {price,change_percent:Number.isFinite(ratio)?ratio:null,observed_at,currency:'KRW',source:'NAVER Finance',market_status:q.marketStatus||'UNKNOWN'};
+}
+function quoteFor(sym){
+ const q=DATA?.quotes?.[sym],instant=Date.parse(q?.observed_at);
+ if(!q||!Number.isFinite(q.price)||q.price<=0||!Number.isFinite(instant)||instant>Date.now()+300000)return null;
+ const day=new Date(instant).toLocaleDateString('en-CA',{timeZone:sym.endsWith('.KS')||sym.endsWith('.KQ')?'Asia/Seoul':'America/New_York'});
+ return hyValidAge(day,7)?q:null;
+}
+function publicNaverHistory(text){
+ const doc=new DOMParser().parseFromString(text,'application/xml'),rows=[];
+ if(doc.querySelector('parsererror'))throw Error('NAVER 일봉 XML 형식 오류');
+ for(const item of doc.querySelectorAll('item[data]')){
+  const a=item.getAttribute('data').split('|'),day=a[0]?.replace(/^(\d{4})(\d{2})(\d{2})$/,'$1-$2-$3');
+  const h=Number(a[2]),l=Number(a[3]),c=Number(a[4]);
+  if(!publicDay(day)||![h,l,c].every(x=>Number.isFinite(x)&&x>0)||l>c||c>h)continue;
+  rows.push({t:Date.parse(day+'T00:00:00+09:00'),c,h,l});
+ }
+ if(rows.length<30)throw Error('NAVER 유효 일봉 30개 미만');
+ return [...new Map(rows.map(x=>[x.t,x])).values()].sort((a,b)=>a.t-b.t);
+}
+
 async function fetchLiveSeries(sym){
   if(LIVE_CACHE[sym]!==undefined)return LIVE_CACHE[sym];
   try{
+    if(/^[0-9]{6}\.(KS|KQ)$/.test(sym)){
+      const url='https://fchart.stock.naver.com/sise.nhn?symbol='+sym.split('.')[0]+'&timeframe=day&count=850&requestType=0';
+      return LIVE_CACHE[sym]=await publicRead(url,publicNaverHistory);
+    }
     const end=Math.floor(Date.now()/1000),start=end-3*366*86400;
     const url='https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(sym)+`?period1=${start}&period2=${end}&interval=1d&includePrePost=false`;
     return LIVE_CACHE[sym]=await publicRead(url,publicYahoo);
@@ -1017,22 +1054,33 @@ async function refreshPublicData(){
       const rows=await fetchLiveSeries(sym);
       if(rows && (rows.at(-1).t>=(DATA.series[sym]?.at(-1)?.t||0))){
         DATA.series[sym]=rows; PUBLIC_STATE.prices++;
+        DATA.series_status ||= {};
+        DATA.series_status[sym]={ok:true,source:/\.(KS|KQ)$/.test(sym)?'NAVER daily OHLC':'Yahoo adjusted daily OHLC',fetched_at:new Date().toISOString()};
       }else PUBLIC_STATE.errors.push(sym);
     };
     await fetchOne(symbols.shift());
     let index=0;
     await Promise.all(Array.from({length:4},async()=>{while(index<symbols.length)await fetchOne(symbols[index++]);}));
   };
+  const quotes=async()=>{
+    DATA.quotes ||= {};
+    await Promise.all(getActiveTickers().filter(x=>/^[0-9]{6}\.(KS|KQ)$/.test(x.sym)).map(async t=>{
+      try{
+        const q=await publicRead('https://m.stock.naver.com/api/stock/'+t.sym.split('.')[0]+'/basic',text=>publicQuote(text,t.sym));
+        if(Date.parse(q.observed_at)>=Date.parse(DATA.quotes[t.sym]?.observed_at||'1970-01-01'))DATA.quotes[t.sym]=q;
+      }catch(e){PUBLIC_STATE.errors.push(t.sym+' 최근 시세');}
+    }));
+  };
   try{
-    await Promise.all([prices(),signal('flow',publicFlow),signal('real_yield',()=>publicYield('DFII10')),signal('nominal_yield',()=>publicYield('DGS10'))]);
+    await Promise.all([quotes(),prices(),signal('flow',publicFlow),signal('real_yield',()=>publicYield('DFII10')),signal('nominal_yield',()=>publicYield('DGS10'))]);
     publicSave();
   }finally{
     document.getElementById('btnRefresh').disabled=false;
     PUBLIC_STATE.running=false; PUBLIC_STATE.checked=new Date().toISOString();
     const priceFailures=PUBLIC_STATE.errors.filter(x=>!['외국인 수급','실질금리','명목금리'].includes(x));
     const failures=[...(priceFailures.length?['시세 '+priceFailures.length+'개']:[]),...PUBLIC_STATE.errors.filter(x=>!priceFailures.includes(x))];
-    note.textContent=`조회 확인 ${new Date().toLocaleTimeString('ko-KR')} · 시세 ${PUBLIC_STATE.prices}개 갱신 · 수급·금리는 일별 발표 자료, 시세는 지연될 수 있습니다.`+
-      (PUBLIC_STATE.errors.length?' · 조회 실패: '+failures.join(', ')+' — 마지막 자료의 기준일을 확인하십시오.':'');
+    note.textContent=`외부 추가조회 ${new Date().toLocaleTimeString('ko-KR')} · 일봉 ${PUBLIC_STATE.prices}개 갱신 · 수급·금리는 일별 발표 자료, 시세는 지연될 수 있습니다.`+
+      (PUBLIC_STATE.errors.length?' · 조회 실패: '+failures.join(', ')+' — 서버 저장 자료는 각 관측일 기준으로 사용합니다.':'');
     note.title=PUBLIC_STATE.errors.join(', ')+'\n'+Object.values(sig.source_status).filter(x=>x?.error).map(x=>x.error).join('\n');
   }
 }
@@ -1049,7 +1097,7 @@ async function series(sym){
   }
   if(KNOWN_MISSING.has(sym)) return null;
   /* data.json에도 없고 알려진 결번도 아니면 사용자가 방금 추가한 종목일
-     가능성이 높다. 이 경우에만 브라우저가 직접(프록시 경유) 실시간 조회한다. */
+     가능성이 높다. 누락 시 직접 또는 중계 경로로 일봉 조회를 시도한다. */
   return await fetchLiveSeries(sym);
 }
 
@@ -1644,6 +1692,7 @@ function renderAllocation(){
 const fmt=(v,c)=>v==null||!isFinite(v)?"—":
   c==="KRW"?"₩"+Math.round(v).toLocaleString("ko-KR"):
   "$"+v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const seriesZone=sym=>/\.(KS|KQ)$/.test(sym)?'Asia/Seoul':(/-USD$|=X$/.test(sym)?'UTC':'America/New_York');
 const dstr=t=>{const d=new Date(t);
   return `${String(d.getFullYear()).slice(2)}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}`;};
 const scoreColor=s=>s>=65?"var(--jade)":s>=45?"var(--amber)":"var(--rust)";
@@ -1849,6 +1898,10 @@ function renderRows(){
       host.appendChild(e); return;
     }
     const s=R.score, v=verdict(s.total), col=scoreColor(s.total), pos=clamp(s.pct,0,100);
+    const q=quoteFor(R.sym),shownPrice=q?q.price:R.last,shownChange=q?q.change_percent:R.chgPct;
+    const historyDay=new Date(R.rows.at(-1).t).toLocaleDateString('ko-KR',{timeZone:seriesZone(R.sym)});
+    const priceNote=q?`${q.market_status==='CLOSE'?'최근 거래가격(장 마감)':'최근 조회 시세(지연 가능)'} ${new Date(q.observed_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})} · ${q.source}`:`저장 일봉 종가 ${historyDay} · 현재 시세 미확인`;
+
     const wj = R.woongJoop;
     const ticks=R.stoNow.map((k,i)=>
       `<div class="tick" style="left:${clamp(k,0,100)}%"><i>${[5,10,20][i]}</i></div>`).join("");
@@ -1857,9 +1910,9 @@ function renderRows(){
     row.innerHTML=`
       <div class="r-id">
         <div class="nm">${R.name}</div><div class="sym">${R.sym}</div>
-        <div class="px">${fmt(R.last,R.cur)}
-          <span class="chg ${R.chgPct>=0?"up":"dn"}">${R.chgPct>=0?"+":""}${R.chgPct.toFixed(2)}%</span></div>
-        <div class="sym">일봉 기준 ${new Date(R.rows.at(-1).t).toLocaleDateString("ko-KR",{timeZone:R.sym.endsWith(".KS")||R.sym.endsWith(".KQ")?"Asia/Seoul":"America/New_York"})} · 지연 가능</div>
+        <div class="px">${fmt(shownPrice,R.cur)}
+          <span class="chg ${shownChange>=0?"up":"dn"}">${Number.isFinite(shownChange)?(shownChange>=0?"+":"")+shownChange.toFixed(2)+"%":"—"}</span></div>
+        <div class="sym">${priceNote}</div>${q?`<div class="sym">아래 지표: ${historyDay} 일봉 기준</div>`:""}
       </div>
       <div class="r-score"><div class="num" style="color:${col}">${s.total}</div><div class="of">/ 100</div></div>
       <div class="r-gauge"><div class="fader">
@@ -1920,7 +1973,7 @@ function buildDetail(R){
   `;
 
   const why=[];
-  why.push(`웅줍 신호: <b>${wj.text}</b> (현재가: ${fmt(R.last, R.cur)})`);
+  why.push(`웅줍 신호: <b>${wj.text}</b> (지표 기준 일봉 종가: ${fmt(R.last, R.cur)})`);
   why.push(`스토캐스틱 5/10/20 평균 <b>%K ${s.kAvg.toFixed(1)}</b>` +
     (s.kAvg<25?" — 과매도 영역입니다.":s.kAvg>75?" — 과매수 영역입니다.":" — 중립 영역입니다."));
   if(s.cross) why.push(`저점권 골든크로스 <b>${s.cross}개</b> 발생.`);
@@ -1978,7 +2031,7 @@ function hyCSVParse(text){
  const first=rows[0].split(',').map(x=>x.trim().replace(/^"|"$/g,''));
  return {headers:first,values:rows.slice(1).map(line=>line.split(',').map(x=>x.trim().replace(/^"|"$/g,'')))};
 }
-function hyCSVValidDay(s){return /^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(new Date(s+'T00:00:00').getTime())}
+function hyCSVValidDay(s){return publicDay(s)}
 function hyCSVConvert(text,which){
  const parsed=hyCSVParse(text), h=parsed.headers;
  const dateIx=h.findIndex(x=>/^(date|DATE|observation_date)$/i.test(x));
@@ -2023,7 +2076,7 @@ document.getElementById('hyFlowCSV').addEventListener('change',e=>hyCSVImport(e.
 document.getElementById('hyCSVClear').addEventListener('click',()=>{localStorage.removeItem(HY_CSV_KEY);hyCSVMessage('CSV 대체자료 삭제. 페이지 새로고침 시 자동자료로 복귀합니다.');location.reload()});
 // 자동 수집 형식: DATA.hynix_signals = { updated_at, flow: [{date, foreign_net_100m, market_cap_100m}], real_yield:[{date,value}] }.
 // 수급은 네이버 공개 외국인 순매수 수량×당일 종가로 추정한 거래대금(억원); 음수=순매도. 시총 역시 해당 일의 외국인 보유수량·보유율·종가로 추정합니다. 자동 수급 기준이 7일 넘으면 계산하지 않습니다.
-const hyDay = d => new Date(d+"T00:00:00").getTime();
+const hyDay = d => Date.parse(d+"T00:00:00Z");
 const hyISO = t => new Date(t).toISOString().slice(0,10);
 function hyAge(date){const today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Seoul'});return Math.round((hyDay(today)-hyDay(date))/86400000);}
 function hyValidAge(date,max){let n=hyAge(date);return Number.isFinite(n)&&n>=0&&n<=max;}
@@ -2036,91 +2089,96 @@ function hyGetAuto(){
  const last=flow[flow.length-1];
  return {flow5:hyLastN(flow,5),flow20:hyLastN(flow,20),cap:last.market_cap_100m,date:last.date,kind:sig._r5_flow?"사용자 CSV(검증 필요)":"자동(NAVER·추정금액)",history:flow};
 }
-function hyNominalRows(){
- const fred=DATA?.hynix_signals?.nominal_yield;
- const y=DATA?.series?.['^TNX'];
- const fallback=Array.isArray(y)?y:[];
- const rows=Array.isArray(fred)?fred.filter(x=>publicDay(x.date)&&Number.isFinite(x.value)):[];
- if(rows.length>=61 && rows.at(-1).date>=hyISO(fallback.at(-1)?.t||0))return rows.map(x=>({t:Date.parse(x.date+'T12:00:00Z'),c:x.value}));
- return fallback;
+function hyNominalCandidates(){
+ const normalize=rows=>[...new Map(rows.filter(x=>Number.isFinite(x.t)&&publicDay(hyISO(x.t))&&Number.isFinite(x.c)&&x.c>=-10&&x.c<=30).map(x=>[hyISO(x.t),x])).values()].sort((a,b)=>a.t-b.t);
+ const fred=normalize((DATA?.hynix_signals?.nominal_yield||[]).filter(x=>publicDay(x.date)).map(x=>({t:Date.parse(x.date+'T12:00:00Z'),c:x.value})));
+ const yahoo=normalize(Array.isArray(DATA?.series?.['^TNX'])?DATA.series['^TNX']:[]);
+ return [{source:'FRED DGS10',rows:fred},{source:'Yahoo ^TNX',rows:yahoo}].filter(x=>x.rows.length>=21).sort((a,b)=>hyISO(b.rows.at(-1).t).localeCompare(hyISO(a.rows.at(-1).t)));
 }
+function hyNominalRows(){return hyNominalCandidates()[0]?.rows||[];}
+function hyNominalSource(){return hyNominalCandidates()[0]?.source||'미확보';}
 function hyRealRows(){
  const r=DATA?.hynix_signals?.real_yield;
- return Array.isArray(r)?r.filter(x=>x&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)&&Number.isFinite(x.value)).sort((a,b)=>a.date.localeCompare(b.date)):[];
+ return Array.isArray(r)?[...new Map(r.filter(x=>x&&publicDay(x.date)&&Number.isFinite(x.value)&&x.value>=-10&&x.value<=30).map(x=>[x.date,x])).values()].sort((a,b)=>a.date.localeCompare(b.date)):[];
 }
+function hyRateValue(shortChange,longChange){
+ const short=clamp(50-shortChange/0.6*50,0,100);
+ return Number.isFinite(longChange)?short*.7+clamp(50-longChange/1.2*50,0,100)*.3:short;
+}
+// 기본 70:20:10. 누락한 입력에 중립값을 넣지 않고 실제 사용 가중치만 정규화한다.
 function hyPoints(n20,n60,r20,r60,flow5,flow20,cap){
- const pct5=flow5/cap*100,pct20=flow20/cap*100;
- const nom20=clamp(50-(n20/0.6)*50,0,100),nom60=clamp(50-(n60/1.2)*50,0,100);
- const real20=clamp(50-(r20/0.6)*50,0,100),real60=clamp(50-(r60/1.2)*50,0,100);
- const net5=clamp(50+(pct5/0.5)*50,0,100),net20=clamp(50+(pct20/1.5)*50,0,100);
- return {score:Math.round((nom20*.7+nom60*.3)*.2+(real20*.7+real60*.3)*.2+(net5*.4+net20*.6)*.6),pct5,pct20,nom:nom20*.7+nom60*.3,real:real20*.7+real60*.3,flow:net5*.4+net20*.6};
+ if(!Number.isFinite(n20))return null;
+ const parts=[{key:'nominal',name:'미국 명목금리',weight:70,value:hyRateValue(n20,n60)}];
+ if(Number.isFinite(r20))parts.push({key:'real',name:'미국 실질금리',weight:20,value:hyRateValue(r20,r60)});
+ const validFlow=[flow5,flow20,cap].every(Number.isFinite)&&cap>0;
+ const pct5=validFlow?flow5/cap*100:null,pct20=validFlow?flow20/cap*100:null;
+ if(validFlow)parts.push({key:'flow',name:'외국인 수급',weight:10,value:clamp(50+pct5/.5*50,0,100)*.4+clamp(50+pct20/1.5*50,0,100)*.6});
+ const coverage=parts.reduce((s,x)=>s+x.weight,0);
+ return {score:Math.round(parts.reduce((s,x)=>s+x.value*x.weight,0)/coverage),coverage,pct5,pct20,parts};
+}
+function hyRateWindow(rows){
+ if(rows.length<21)return null;
+ const last=rows.at(-1);
+ return {last,short:last.c-rows.at(-21).c,long:rows.length>=61?last.c-rows.at(-61).c:null,date:hyISO(last.t)};
 }
 function hyBacktestView(){
- const el=document.getElementById("hyBacktest"),af=hyGetAuto(),r=hyRealRows(),y=hyNominalRows(),px=DATA?.series?.["000660.KS"];
- if(!af || af.history.length<160 || r.length<160 || y.length<160 || !Array.isArray(px) || px.length<160){
-  el.innerHTML="<b>과거 검증 대기</b> — 외국인 수급·미 실질금리·국채금리·하이닉스 주가의 최소 160거래일 연속 데이터가 필요합니다. 데이터 미확보 시 수익률·승률을 생성하지 않습니다.";return;
+ const el=document.getElementById('hyBacktest'),y=hyNominalRows(),px=DATA?.series?.['000660.KS'];
+ const verified=DATA?.series_status?.['000660.KS']?.ok===true;
+ if(y.length<160||!Array.isArray(px)||px.length<160||!verified){
+  el.textContent='국채금리 단독 과거 검증 대기 — 검증된 하이닉스 일봉과 명목금리 이력이 필요합니다. 현재 점수 산출에는 과거 검증 완료를 요구하지 않습니다.';return;
  }
- const ns=new Map(y.map(x=>[hyISO(x.t),x.c]));
- const rs=new Map(r.map(x=>[x.date,x.value]));
- const ps=new Map(px.map(x=>[hyISO(x.t),x.c]));
- // 각 날짜의 당시 알려진 값만 사용. 미국 금리는 한국 거래일 전일 값까지만 사용하여 시차에 따른 미래정보 누출 방지.
- function asof(map,day){const prev=Array.from(map.keys()).filter(d=>d<day).sort().pop();return prev?map.get(prev):null;}
- const fd=af.history;
+ // 한국 거래일 전일까지 발표된 미국 관측치만 사용한다. 보완 입력은 백테스트에 섞지 않는다.
  const samples=[];
- for(let i=60;i<fd.length-20;i++){
-  const date=fd[i].date,prev=fd[i-20].date,old=fd[i-60].date;
-  const n0=asof(ns,date),n20=asof(ns,prev),n60=asof(ns,old),r0=asof(rs,date),r20=asof(rs,prev),r60=asof(rs,old);
-  const p0=ps.get(date),pNext=ps.get(fd[i+20].date);
-  if([n0,n20,n60,r0,r20,r60,p0,pNext].some(v=>!Number.isFinite(v)) || p0<=0 || pNext<=0)continue;
-  const f5=hyLastN(fd.slice(0,i+1),5),f20=hyLastN(fd.slice(0,i+1),20);
-  const score=hyPoints(n0-n20,n0-n60,r0-r20,r0-r60,f5,f20,fd[i].market_cap_100m).score;
-  samples.push({i,date,score,ret:(pNext/p0-1)*100});
+ for(let i=0;i<px.length-20;i++){
+  const day=new Date(px[i].t).toLocaleDateString('en-CA',{timeZone:'Asia/Seoul'});
+  const window=y.filter(x=>hyISO(x.t)<day),w=hyRateWindow(window);
+  if(!w||!Number.isFinite(w.long)||!hyValidHistoricalGap(day,w.date)||px[i].c<=0)continue;
+  const score=hyPoints(w.short,w.long,null,null,null,null,null).score;
+  samples.push({i,day,score,ret:(px[i+20].c/px[i].c-1)*100});
  }
- // 겹치는 20거래일 보유기간의 과대 표본 집계를 방지하기 위해 20거래일 간격의 관측만 선택.
- const evalGroup=fn=>{let arr=samples.filter(fn),used=[],last=-999;for(const z of arr){if(z.i-last>=20){used.push(z);last=z.i;}}return used;};
- const buy=evalGroup(z=>z.score>=70),sell=evalGroup(z=>z.score<=30);
- const stats=a=>a.length?`${a.length}건 · 이후 20거래일 평균 ${(a.reduce((s,x)=>s+x.ret,0)/a.length).toFixed(1)}% · 상승 비율 ${(a.filter(x=>x.ret>0).length/a.length*100).toFixed(0)}%`:"표본 0건";
- const start=samples[0]?.date||"—",end=samples[samples.length-1]?.date||"—";
- el.innerHTML=`<b>과거 20거래일 사후성과 (탐색적·미검증 신호)</b><br>70점 이상: ${stats(buy)}<br>30점 이하: ${stats(sell)}<br>검증기간: ${start}~${end}, 거래비용·세금 미반영. 비중첩 표본이며 최적화·독립 검증이 없어 투자전략으로 검증되었다는 뜻이 아닙니다. 미국 금리는 한국 거래일 기준 전일 데이터만 사용합니다.`;
-}
-function hyRender(){
- const y=hyNominalRows(), r=hyRealRows(), auto=hyGetAuto(),manual=hyRead();
- const status=document.getElementById("hyAutoStatus"),box=document.getElementById("hyBreakdown");box.innerHTML="";
- const flow=manual ? {...manual,kind:"수동 입력"} : auto;
- status.textContent=manual?"수동 입력이 자동 데이터를 덮어쓰고 있습니다. '수동값 제거·자동 전환'을 누르면 복귀합니다.":auto?`외국인 수급 ${auto.kind}: ${auto.date} · ${hyValidAge(auto.date,7)?"최신":"오래된 데이터(점수 중단)"}`:"외국인 수급 자료 없음. 무료 소스 자동 조회 결과를 아래에서 확인하십시오. 수동 입력·CSV도 사용할 수 있습니다.";
- const srcState=DATA?.hynix_signals?.source_status;
- const srcErrors=DATA?.hynix_signals?.errors;
- if(srcState && Object.values(srcState).some(x=>x && x.ok===false)) {
-  const failures=Object.entries(srcState).filter(([k,v])=>v?.ok===false).map(([k,v])=>k==='flow'?'외국인 수급':k==='nominal_yield'?'미국 명목금리':'미국 실질금리');
-  status.textContent += ` · 자동 소스 오류 기록: ${failures.join(', ')} (마지막 성공 데이터 날짜 확인 필요)`;
- }
- if(Array.isArray(srcErrors)&&srcErrors.length) status.title=srcErrors.join(' | ');
-
- const fail=m=>{
-  hyMarkMissing(m);
-  document.getElementById('hySource').textContent=`자료 기준일 — 외국인 수급 ${auto?.date||'없음'} · 명목금리 ${y.length?hyISO(y.at(-1).t):'없음'} · 실질금리 ${r.at(-1)?.date||'없음'}. 수급·금리는 일별 발표 자료이며 오래된 값으로 점수를 만들지 않습니다.`;
-  hyBacktestView();
+ const stats=filter=>{
+  const used=[];let last=-999;
+  for(const x of samples.filter(filter))if(x.i-last>=20){used.push(x);last=x.i;}
+  return used.length?`${used.length}건 · 20거래일 평균 ${(used.reduce((s,x)=>s+x.ret,0)/used.length).toFixed(1)}% · 상승비율 ${(used.filter(x=>x.ret>0).length/used.length*100).toFixed(0)}%`:'표본 없음';
  };
- if(y.length<61)return fail("미국 명목 국채금리(DGS10 또는 ^TNX) 61거래일 이상 데이터가 필요합니다.");
- if(r.length<61)return fail("실질금리(FRED DFII10) 자료가 부족합니다. 자동 조회 중이거나 소스 연결이 실패했습니다. 아래 조회 상태를 확인하십시오.");
- if(!flow || [flow.flow5,flow.flow20,flow.cap].some(x=>!Number.isFinite(Number(x))) || Number(flow.cap)<=0||!flow.date)return fail("외국인 순매수 자료가 부족합니다. 아래 자동 조회 상태를 확인하거나 수동 입력·CSV를 사용하십시오.");
- if(!hyValidAge(flow.date,7))return fail("외국인 수급이 7일 이상 오래됐습니다. 낡은 값으로 매매점수를 만들지 않습니다.");
- const last=y[y.length-1],yn=y[y.length-21],yo=y[y.length-61],rr=r[r.length-1],rn=r[r.length-21],ro=r[r.length-61];
- if(![last,yn,yo,rr,rn,ro].every(Boolean))return fail("금리 데이터 결측으로 계산이 불가능합니다.");
- const yd=hyISO(last.t);
- if(!hyValidAge(yd,10)||!hyValidAge(rr.date,10))return fail("미 국채 또는 실질금리 데이터가 10일 이상 오래됐습니다.");
- // 소스 시계열 날짜가 비정상적으로 차이나면 시점 오염을 피한다.
- if(Math.abs(hyDay(yd)-hyDay(rr.date))>7*86400000)return fail("미 국채금리와 실질금리의 기준일 차이가 7일을 초과했습니다.");
- const p=hyPoints(last.c-yn.c,last.c-yo.c,rr.value-rn.value,rr.value-ro.value,Number(flow.flow5),Number(flow.flow20),Number(flow.cap));
- document.getElementById("hyBuy").textContent=p.score+" / 100";
- document.getElementById("hySell").textContent=(100-p.score)+" / 100";
- document.getElementById("hyBuyDesc").textContent="명목금리 20% + 실질금리 20% + 수급 60%";
- document.getElementById("hySellDesc").textContent="매수 점수의 보수(100−매수)";
- document.getElementById("hyAction").textContent=p.score>=70?"매수 우호 — 목표 비중 내 추가 매수 검토":p.score>=55?"매수 우위 — 분할 매수 검토":p.score>=45?"중립 — 비중 유지":p.score>=30?"매도 우위 — 초과비중 축소 검토":"매도 압력 우세 — 리스크 점검 및 초과비중 축소";
- box.innerHTML=`<div class="hynix-metric"><b>미국 명목 10년물: ${last.c.toFixed(2)}%</b>20일 ${(last.c-yn.c).toFixed(2)}%p · 60일 ${(last.c-yo.c).toFixed(2)}%p · ${p.nom.toFixed(1)}/100</div><div class="hynix-metric"><b>미국 실질 10년물: ${rr.value.toFixed(2)}%</b>20일 ${(rr.value-rn.value).toFixed(2)}%p · 60일 ${(rr.value-ro.value).toFixed(2)}%p · ${p.real.toFixed(1)}/100</div><div class="hynix-metric"><b>외국인 수급: 5일 ${Number(flow.flow5).toLocaleString("ko-KR")}억원 / 20일 ${Number(flow.flow20).toLocaleString("ko-KR")}억원</b>시총 대비 각각 ${p.pct5.toFixed(3)}% / ${p.pct20.toFixed(3)}% · ${p.flow.toFixed(1)}/100</div>`;
- document.getElementById("hySource").textContent=`외국인 데이터 ${flow.date} (${flow.kind}; 금액·시총 추정) · 미국 명목금리 ${yd} · 실질금리 ${rr.date}. 외국인 순매수 금액 및 시총은 공개 수량·종가·보유율 기반 추정값입니다. 데이터 지연·웹페이지 변경에 유의하십시오. 점수는 경험적 규칙이지 확률이 아닙니다.`;
+ el.textContent=`국채금리 단독 규칙 사후성과(선택 보완 점수와 별개): 70점 이상 ${stats(x=>x.score>=70)} / 30점 이하 ${stats(x=>x.score<=30)}. 비중첩 표본, 비용·세금 미반영, 예측력 미검증.`;
+}
+function hyValidHistoricalGap(day,previous){const gap=(hyDay(day)-hyDay(previous))/86400000;return gap>0&&gap<=10;}
+function hyRender(){
+ const y=hyNominalRows(),r=hyRealRows(),auto=hyGetAuto(),manual=hyRead();
+ const status=document.getElementById('hyAutoStatus'),box=document.getElementById('hyBreakdown');
+ box.innerHTML='';
+ const nominal=hyRateWindow(y);
+ if(!nominal||!hyValidAge(nominal.date,10)){
+  hyMarkMissing(nominal?'미국 명목금리 자료가 10일보다 오래되어 계산을 보류합니다.':'미국 명목금리(DGS10 또는 ^TNX) 21거래일 이상의 자료가 필요합니다.');
+  status.textContent='기본 입력: 미국 10년 국채금리. 실질금리·외국인 수급 누락은 계산을 막지 않습니다.';
+  document.getElementById('hySource').textContent=`명목금리 마지막 관측일 ${nominal?.date||'없음'} · 데이터 갱신이 필요합니다.`;
+  hyBacktestView();return;
+ }
+ const rw=hyRateWindow(r.map(x=>({t:Date.parse(x.date+'T12:00:00Z'),c:x.value})));
+ const real=rw&&hyValidAge(rw.date,10)&&Math.abs(hyDay(rw.date)-hyDay(nominal.date))<=7*86400000?rw:null;
+ const candidate=manual?{...manual,kind:'수동 입력'}:auto;
+ const flow=candidate&&[candidate.flow5,candidate.flow20,candidate.cap].every(x=>hyNum(x)!==null&&Number.isFinite(hyNum(x)))&&Number(candidate.cap)>0&&hyValidAge(candidate.date,7)?candidate:null;
+ const p=hyPoints(nominal.short,nominal.long,real?.short??null,real?.long??null,flow?Number(flow.flow5):null,flow?Number(flow.flow20):null,flow?Number(flow.cap):null);
+ const mode=p.parts.map(x=>`${x.name} ${Math.round(x.weight/p.coverage*100)}%`).join(' + ');
+ document.getElementById('hyBuy').textContent=p.score+' / 100';
+ document.getElementById('hySell').textContent=(100-p.score)+' / 100';
+ document.getElementById('hyBuyDesc').textContent=mode;
+ document.getElementById('hySellDesc').textContent='100 − 매수 적합도 · 독립적인 확률 아님';
+ const excluded=[...(!real?['실질금리']:[]),...(!flow?['외국인 수급']:[])];
+ status.textContent=`${p.parts.length===1?'국채금리 단독 모드':'국채금리 중심 보완 모드'} · 사용 가능한 기본 가중치 ${p.coverage}/100 (데이터 확보 범위, 신뢰확률 아님)`+
+  (excluded.length?` · ${excluded.join('·')} 미확보/오래됨: 계산에서 제외`:'')+(manual?(flow?' · 수급 수동 입력 적용':' · 유효하지 않은 수급 수동 입력 제외'):'');
+ const direction=p.score>=70?'매수 우호':p.score>=55?'매수 쪽 기울기':p.score>=45?'중립':p.score>=30?'매도 쪽 기울기':'매도 압력';
+ document.getElementById('hyAction').textContent=`${direction} — 국채금리 변화 중심의 참고 점수입니다.`;
+ const metric=(title,detail)=>`<div class="hynix-metric"><b>${title}</b>${detail}</div>`;
+ const changes=w=>`20거래일 ${w.short.toFixed(2)}%p · `+(Number.isFinite(w.long)?`60거래일 ${w.long.toFixed(2)}%p`:'60거래일 이력 부족: 20거래일 변화만 반영');
+ box.innerHTML=metric(`미국 명목 10년물 ${nominal.last.c.toFixed(2)}%`,changes(nominal)+' · '+nominal.date)+
+  metric(real?`미국 실질 10년물 ${real.last.c.toFixed(2)}%`:'실질금리 미반영',real?changes(real)+' · '+real.date:'자료 미확보·지연 시 명목금리만으로 계산합니다.')+
+  metric(flow?'외국인 수급 보완':'외국인 수급 미반영',flow?`5일 ${Number(flow.flow5).toLocaleString('ko-KR')}억원 / 20일 ${Number(flow.flow20).toLocaleString('ko-KR')}억원 · ${flow.date}`:'자료 미확보·지연 시 국채금리 점수를 유지합니다.');
+ document.getElementById('hySource').textContent=`명목금리 ${hyNominalSource()} ${nominal.date}${real?' · 실질금리 FRED DFII10 '+real.date:''}${flow?' · 수급 '+flow.kind+' '+flow.date:''}. 일별 관측치 기준이며 수급 금액은 추정치입니다. 금리 하락을 우호적으로 평가하는 규칙이며 주가 상승 확률이 아닙니다.`;
  hyBacktestView();
 }
+
 document.getElementById("hySave").addEventListener("click",()=>{
   const v={flow5:document.getElementById("hyFlow5").value,flow20:document.getElementById("hyFlow20").value,cap:document.getElementById("hyCap").value,date:document.getElementById("hyFlowDate").value};
   try{localStorage.setItem(HY_LS_KEY,JSON.stringify(v));hyRender();}

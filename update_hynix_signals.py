@@ -182,7 +182,7 @@ def main():
         raise SystemExit(f'Missing {ROOT}: run existing dashboard data collection first')
     data = json.loads(ROOT.read_text(encoding='utf-8'))
     old = data.get('hynix_signals') or {}
-    merged = {
+    merged = {**old,
         'updated_at': NOW.isoformat(),
         'flow': old.get('flow', []),
         'real_yield': old.get('real_yield', []),
@@ -191,7 +191,7 @@ def main():
             'real_yield': 'FRED DFII10; US 10-year TIPS real yield',
         },
         'errors': [],
-        'source_status': {},
+        'source_status': {k: v for k, v in (old.get('source_status') or {}).items() if k not in ('flow', 'real_yield')},
     }
     successful = 0
     for key, fn in [('flow', lambda: foreign_flow(old.get('flow', []))), ('real_yield', real_yield)]:
