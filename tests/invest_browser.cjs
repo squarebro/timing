@@ -77,9 +77,10 @@ const headers = {'access-control-allow-origin':'*'};
  await scenario('source fixture quote is fetched through anonymous fallback',onlyNominal,async(p,c)=>{
   assert.ok(c.proxyRequests>0);assert.equal(await p.evaluate(()=>quoteFor('000660.KS').price),250500);await hasScore(p);
  },'proxy');
- await scenario('optional stale yields and manual blank inputs do not suppress nominal',d=>{d.hynix_signals={real_yield:yields(100).map(x=>({...x,date:'2025'+x.date.slice(4)}))};return d;},async p=>{
-  await p.evaluate(()=>{localStorage.setItem(HY_LS_KEY,JSON.stringify({flow5:'',flow20:'',cap:'1000',date:'2026-10-15'}));hyRender();});
+ await scenario('stale optional yields do not suppress nominal and top opinion has three lines',d=>{d.hynix_signals={real_yield:yields(100).map(x=>({...x,date:'2025'+x.date.slice(4)}))};return d;},async p=>{
   await hasScore(p);assert.match(await p.locator('#hyBuyDesc').textContent(),/명목금리 100%/);
+  assert.equal(await p.locator('#hyTopOpinion > div').count(),3);
+  assert.equal(await p.locator('#hySave').count(),0);assert.equal(await p.locator('#hyRealCSV').count(),0);
  });
  await scenario('repeated refresh stays nominal-only and never restores legacy cache',d=>d,async p=>{
   const before=await p.locator('#hyBuy').textContent();await p.locator('#btnRefresh').click();await p.waitForFunction(()=>!RUN_PENDING&&!PUBLIC_STATE.running);assert.equal(await p.locator('#hyBuy').textContent(),before);
@@ -98,13 +99,14 @@ const headers = {'access-control-allow-origin':'*'};
  await scenario('observed zero flows are neutral and remain included',d=>{d.hynix_signals={flow:investorRows().map(x=>({...x,foreign_net_shares:0,institution_net_shares:0}))};return d;},async p=>{
   assert.equal(await p.evaluate(()=>hyInvestorSignal('institution').score),50);assert.equal(await p.evaluate(()=>hyInvestorSignal('foreign').score),50);assert.match(await p.locator('#hyBuyDesc').textContent(),/기관/);
  });
- await scenario('new raw-share CSV imports both participants and preserves legacy CSV',onlyNominal,async p=>{
-  const v=await p.evaluate(rows=>{
-   const csv='date,foreign_net_shares,institution_net_shares\n'+rows.map(x=>[x.date,x.foreign_net_shares,x.institution_net_shares].join(',')).join('\n');
-   const parsed=hyCSVConvert(csv,'flow');DATA.hynix_signals.flow=parsed;hyRender();
-   const legacy='date,foreign_net_100m,market_cap_100m\n'+rows.map(x=>x.date+',10,10000').join('\n');
-   return {size:parsed.length,institution:hyInvestorSignal('institution').score,old:hyCSVConvert(legacy,'flow').length};
-  },investorRows());assert.equal(v.size,20);assert.equal(v.institution,100);assert.equal(v.old,20);await hasScore(p);
+ await scenario('OHLCV data builds volume support/resistance candidates with no CSV input',onlyNominal,async p=>{
+  const result=await p.evaluate(()=>{
+   DATA.series['000660.KS']=Array.from({length:252},(_,i)=>({t:Date.parse('2026-02-07T00:00:00Z')+i*86400000,c:100000+(Math.floor(i/18)%11)*1000,h:112000,l:99000,v:100000+i%19*5000}));
+   hyRenderVolume();
+   return {text:document.getElementById('hyVolumeProfile').textContent,p:hyVolumeProfile(DATA.series['000660.KS'],252)};
+  });
+  assert.ok(result.p.poc);assert.match(result.text,/주요 지지 후보/);assert.match(result.text,/POC/);
+  assert.equal(await p.locator('input[type=file]').count(),0);
  });
  await scenario('NAVER JSON refresh supplies usable foreign and institutional scores',onlyNominal,async p=>{
   assert.equal(await p.evaluate(()=>hyInvestorSignal('foreign').score),0);assert.equal(await p.evaluate(()=>hyInvestorSignal('institution').score),100);assert.match(await p.locator('#hyBuyDesc').textContent(),/기관 수급/);
