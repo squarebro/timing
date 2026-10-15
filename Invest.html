@@ -507,6 +507,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 
 <div class="sec"><span class="n">05-A</span><h2>SK하이닉스 · 미국 국채금리 × 외국인·기관 수급</h2><div class="ln"></div></div>
 <div class="hynix-wrap">
+  <div id="hyTopOpinion" class="hynix-note" role="status" aria-live="polite" style="border:1px solid var(--rule);padding:12px 14px;background:var(--paper-2);margin-bottom:14px;line-height:1.7;font-weight:600">종합 매매 의견 계산 중…</div>
   <div style="font-size:12px;line-height:1.7;color:var(--ink-2)">미국 10년 국채금리를 기본으로 계산합니다. 기본 가중치는 <b>명목금리 60 · 실질금리 20 · 외국인 수급 10 · 기관 수급 10</b>이며, 보완 자료가 없으면 제외하고 남은 가중치를 100으로 환산합니다. <b>명목금리만 있어도 계산</b>하며, 금리 하락을 매수 우호적으로 평가합니다.</div>
   <div class="hynix-scores">
     <div class="hynix-score"><div class="label">매수 적합도 · BUY</div><div class="number" id="hyBuy">—</div><div class="hint" id="hyBuyDesc">국채금리와 선택 수급 자료를 확인 중입니다.</div></div>
@@ -514,13 +515,6 @@ button:disabled{opacity:.4;cursor:not-allowed}
   </div>
   <div class="hynix-note" id="hyAutoStatus">자동 데이터 확인 중…</div>
   <div class="hynix-note" id="liveStatus" role="status" aria-live="polite">저장 자료 표시 후 무료 소스 자동 조회 · 5분마다 갱신 · 수급·금리는 일별 발표 기준</div>
-  <details style="margin-top:12px"><summary style="cursor:pointer;font-size:12px;font-weight:600">외국인 수동 입력 / 덮어쓰기 (시총비율 방식)</summary><div class="hynix-inputs">
-    <label>외국인 최근 5거래일 순매수 (억원)<input id="hyFlow5" type="number" step="any" placeholder="예: 1500 / -1500"></label>
-    <label>외국인 최근 20거래일 순매수 (억원)<input id="hyFlow20" type="number" step="any" placeholder="예: 4000 / -4000"></label>
-    <label>SK하이닉스 시가총액 (억원)<input id="hyCap" type="number" step="any" min="1" placeholder="현재 시총 입력"></label>
-    <label>외국인 수급 데이터 기준일<input id="hyFlowDate" type="date"></label>
-  </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="hySave" style="flex:0 1 auto">외국인 수동값 저장·평가</button><button id="hyClear" class="ghost" style="flex:0 1 auto">수동값 제거·자동 전환</button></div></details>
   <div class="hynix-note" style="margin-top:12px"><b>가격대별 거래량 · 잠재적 지지/저항</b> — 종가별 일간 거래량 집계(체결가별 거래량 아님). 분석 기간별 차이를 확인합니다.</div>
   <div class="hynix-note"><label for="hyVPPeriod">분석 기간　</label><select id="hyVPPeriod" style="padding:6px;background:var(--card);border:1px solid var(--rule)"><option value="63">최근 3개월 (63거래일)</option><option value="252" selected>최근 1년 (252거래일)</option><option value="756">최근 3년 (756거래일)</option></select></div>
   <div id="hyVolumeProfile" class="hynix-note" role="status">가격대별 거래량 데이터를 확인 중입니다.</div>
@@ -2037,16 +2031,7 @@ function buildDetail(R){
 
 
 /* ═══════════ 하이닉스: 국채금리 × 외국인 순매수 신호 ═══════════ */
-const HY_LS_KEY="timingDesk.hynixFlow.v1";
-function hyRead(){
-  try { return JSON.parse(localStorage.getItem(HY_LS_KEY)||"null"); }catch(e){return null;}
-}
 function hyNum(v){return v==null||v===""?null:Number(v);}
-function hyPopulate(){
-  const v=hyRead(); if(!v)return;
-  [["hyFlow5",v.flow5],["hyFlow20",v.flow20],["hyCap",v.cap],["hyFlowDate",v.date]]
-    .forEach(([k,x])=>{if(x!=null)document.getElementById(k).value=x;});
-}
 function hyMarkMissing(message){
   document.getElementById("hyBuy").textContent="—";
   document.getElementById("hySell").textContent="—";
@@ -2056,7 +2041,7 @@ function hyMarkMissing(message){
 }
 // flow: [{date, foreign_net_shares?, institution_net_shares?, individual_net_shares?, close?}].
 // 자동 수급은 실제 순매수 주수의 5·20일 방향·지속성. 미확보는 0으로 대체하지 않는다. 자료가 7일 넘게 오래되면 보완에서 제외한다.
-// 종전 CSV/수동 외국인 금액·시총 비율은 호환 경로로만 유지한다.
+// 기존 자동 데이터에 포함된 금액·시총 비율의 호환 경로는 유지한다.
 const hyDay = d => Date.parse(d+"T00:00:00Z");
 const hyISO = t => new Date(t).toISOString().slice(0,10);
 function hyAge(date){const today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Seoul'});return Math.round((hyDay(today)-hyDay(date))/86400000);}
@@ -2068,7 +2053,7 @@ function hyGetAuto(){
  const flow=sig.flow.filter(x=>x && /^\d{4}-\d{2}-\d{2}$/.test(x.date)&&Number.isFinite(x.foreign_net_100m)&&Number.isFinite(x.market_cap_100m)&&x.market_cap_100m>0).sort((a,b)=>a.date.localeCompare(b.date));
  if(flow.length<20)return null;
  const last=flow[flow.length-1];
- return {flow5:hyLastN(flow,5),flow20:hyLastN(flow,20),cap:last.market_cap_100m,date:last.date,kind:sig._r5_flow?"사용자 CSV(검증 필요)":"자동(NAVER·추정금액)",history:flow};
+ return {flow5:hyLastN(flow,5),flow20:hyLastN(flow,20),cap:last.market_cap_100m,date:last.date,kind:"자동(NAVER·추정금액)",history:flow};
 }
 function hyInvestorSignal(who){
  const name=who+'_net_shares',rows=DATA?.hynix_signals?.flow;
@@ -2156,7 +2141,7 @@ function hyVolumeProfile(rows,period){
  const requested=rows.slice(-period);
  if(requested.length<45)return {error:'유효 일봉이 45거래일 미만입니다.'};
  const valid=requested.filter(x=>Number.isFinite(x.c)&&x.c>0&&Number.isFinite(x.v)&&x.v>0);
- if(valid.length/requested.length<.9)return {error:'거래량 포함 일봉이 부족합니다. 기존 data.json에 거래량(v)이 없는 경우 자동 갱신 후 확인하십시오.'};
+ if(valid.length/requested.length<.9)return {error:'자동 저장된 거래량 포함 일봉이 부족합니다. 서버 data.json 갱신 후 다시 확인하십시오.'};
  const lo=Math.min(...valid.map(x=>x.c)),hi=Math.max(...valid.map(x=>x.c));
  if(!(hi>lo))return {error:'가격 범위가 형성되지 않았습니다.'};
  const count=30,step=(hi-lo)/count,vol=Array(count).fill(0);
@@ -2174,10 +2159,12 @@ function hyRenderVolume(){
  const period=Number(document.getElementById('hyVPPeriod').value)||252;
  const rows=DATA?.series?.['000660.KS'];
  if(!Array.isArray(rows)||!rows.length){el.textContent='SK하이닉스 일봉 데이터가 없어 분석을 보류합니다.';return;}
+ const lastDay=new Date(rows.at(-1)?.t).toLocaleDateString('en-CA',{timeZone:'Asia/Seoul'});
+ if(!publicDay(lastDay)||!hyValidAge(lastDay,10)){el.textContent='하이닉스 일봉이 최신이 아닙니다('+lastDay+'). 자동 데이터 갱신을 확인하십시오.';return;}
  const z=hyVolumeProfile(rows,period);
  if(z.error){el.textContent=z.error+' (가상의 지지·저항 가격을 표시하지 않습니다.)';return;}
  const money=v=>Math.round(v).toLocaleString('ko-KR')+'원';
- const display=b=>b?money(b.lo)+'~'+money(b.hi):'해당 구간 없음';
+ const display=b=>b?money(b.lo)+'~'+money(b.hi):'현재가 기준 해당 거래 집중 구간 없음';
  const top=Math.max(...z.bars.map(b=>b.v));
  const bars=z.bars.map(b=>'<div style="display:flex;align-items:center;gap:8px;margin:2px 0"><span style="font:10px monospace;min-width:110px">'+money(b.lo)+'</span><div style="height:9px;flex:1;background:var(--paper-2)"><div style="height:100%;width:'+(100*b.v/top).toFixed(1)+'%;background:'+(b===z.poc?'var(--jade)':'var(--cobalt)')+'"></div></div></div>').reverse().join('');
  el.innerHTML='<div style="line-height:1.8"><b>현재 일봉 종가 '+money(z.current)+'</b> · 분석 '+z.days+'거래일 · 기준 '+new Date(z.end).toLocaleDateString('ko-KR')+'</div>'+
@@ -2194,14 +2181,28 @@ function hyRenderBondMeaning(nominal,real){
  el.innerHTML='<b>미 국채금리의 SK하이닉스 영향 (3줄 요약)</b><div>'+first+'</div><div>'+second+'</div><div>최종 방향은 외국인 수급·원달러 환율·HBM 이익 전망을 함께 확인해야 합니다.</div>';
 }
 
+/* 채권/수급 우선 3줄 요약: 분석 근거가 없으면 '미확보'로 표시. */
+function hyRenderTopOpinion(nominal,real,foreign,institution,score){
+ const box=document.getElementById('hyTopOpinion');
+ if(!box)return;
+ const line1=score?('① 종합 의견: '+(score.score>=70?'매수 우호':score.score>=55?'분할매수 검토':score.score>=45?'중립·관망':score.score>=30?'매도 우위·비중 점검':'위험 신호·매도 검토')+' (매수 '+score.score+'/100 · 매도 '+(100-score.score)+'/100, 이용 가중치 '+score.coverage+'/100).'):'① 종합 의견: 국채금리 데이터가 부족해 매수·매도 점수를 보류합니다.';
+ const dir=x=>x>.05?'상승(주가 할인율 부담)':x<-.05?'하락(부담 완화 가능)':'대체로 안정';
+ const line2=nominal?('② 미국 10년 국채 '+nominal.last.c.toFixed(2)+'% · 20일 '+(nominal.short>=0?'+':'')+nominal.short.toFixed(2)+'%p '+dir(nominal.short)+(real?' / 실질 '+real.last.c.toFixed(2)+'%':' / 실질금리 미확보')+'.'):'② 미국 명목 국채금리 미확보: 금리 환경 판단 불가.';
+ const f=x=>x?((x.net5>=0?'+':'')+x.net5.toLocaleString('ko-KR')+'주 ('+(x.net5>0?'순매수':x.net5<0?'순매도':'중립')+')'):'미확보';
+ const line3='③ 최근 5거래일 외국인 '+f(foreign)+' · 기관 '+f(institution)+'; 기업실적·목표비중 및 확정 부채상환 일정 우선.';
+ box.replaceChildren();
+ for(const value of [line1,line2,line3]){const div=document.createElement('div');div.textContent=value;box.appendChild(div);}
+}
+
 function hyRender(){
  hyRenderVolume();
- const y=hyNominalRows(),r=hyRealRows(),auto=hyGetAuto(),manual=hyRead();
+ const y=hyNominalRows(),r=hyRealRows(),auto=hyGetAuto();
  hyInvestorTable();
  const status=document.getElementById('hyAutoStatus'),box=document.getElementById('hyBreakdown');
  box.innerHTML='';
  const nominal=hyRateWindow(y);
  if(!nominal||!hyValidAge(nominal.date,10)){
+  hyRenderTopOpinion(null,null,hyInvestorSignal('foreign'),hyInvestorSignal('institution'),null);
   hyRenderBondMeaning(nominal,null);
   hyMarkMissing(nominal?'미국 명목금리 자료가 10일보다 오래되어 계산을 보류합니다.':'미국 명목금리(DGS10 또는 ^TNX) 21거래일 이상의 자료가 필요합니다.');
   status.textContent='기본 입력: 미국 10년 국채금리. 실질금리·외국인·기관 수급 누락은 계산을 막지 않습니다.';
@@ -2211,10 +2212,11 @@ function hyRender(){
  const rw=hyRateWindow(r.map(x=>({t:Date.parse(x.date+'T12:00:00Z'),c:x.value})));
  const real=rw&&hyValidAge(rw.date,10)&&Math.abs(hyDay(rw.date)-hyDay(nominal.date))<=7*86400000?rw:null;
  hyRenderBondMeaning(nominal,real);
- const rawForeign=manual?null:hyInvestorSignal('foreign'),institution=hyInvestorSignal('institution');
- const candidate=manual?{...manual,kind:'수동 입력(시총비율 방식)'}:auto;
+ const rawForeign=hyInvestorSignal('foreign'),institution=hyInvestorSignal('institution');
+ const candidate=auto;
  const flow=candidate&&[candidate.flow5,candidate.flow20,candidate.cap].every(x=>hyNum(x)!==null&&Number.isFinite(hyNum(x)))&&Number(candidate.cap)>0&&hyValidAge(candidate.date,7)?candidate:null;
  const p=hyPoints(nominal.short,nominal.long,real?.short??null,real?.long??null,flow?Number(flow.flow5):null,flow?Number(flow.flow20):null,flow?Number(flow.cap):null,rawForeign?.score??null,institution?.score??null,rawForeign?.weight??10,institution?.weight??10);
+ hyRenderTopOpinion(nominal,real,rawForeign,institution,p);
  const mode=p.parts.map(x=>`${x.name} ${(x.weight/p.coverage*100).toLocaleString('ko-KR',{maximumFractionDigits:1})}%`).join(' + ');
  document.getElementById('hyBuy').textContent=p.score+' / 100';
  document.getElementById('hySell').textContent=(100-p.score)+' / 100';
@@ -2222,7 +2224,7 @@ function hyRender(){
  document.getElementById('hySellDesc').textContent='100 − 매수 적합도 · 독립적인 확률 아님';
  const excluded=[...(!real?['실질금리']:[]),...(!rawForeign&&!flow?['외국인 수급']:[]),...(!institution?['기관 수급']:[])];
  status.textContent=`${p.parts.length===1?'국채금리 단독 모드':'국채금리 중심 보완 모드'} · 사용 가능한 기본 가중치 ${p.coverage}/100 (데이터 확보 범위, 신뢰확률 아님)`+
-  (excluded.length?` · ${excluded.join('·')} 미확보/오래됨: 계산에서 제외`:'')+(manual?(flow?' · 수급 수동 입력 적용':' · 유효하지 않은 수급 수동 입력 제외'):'');
+  (excluded.length?` · ${excluded.join('·')} 미확보/오래됨: 계산에서 제외`:'');
  const direction=p.score>=70?'매수 우호':p.score>=55?'매수 쪽 기울기':p.score>=45?'중립':p.score>=30?'매도 쪽 기울기':'매도 압력';
  document.getElementById('hyAction').textContent=`${direction} — 국채금리 변화 중심의 참고 점수입니다.`;
  const metric=(title,detail)=>`<div class="hynix-metric"><b>${title}</b>${detail}</div>`;
@@ -2237,18 +2239,6 @@ function hyRender(){
 }
 
 document.getElementById('hyVPPeriod').addEventListener('change',hyRenderVolume);
-document.getElementById("hySave").addEventListener("click",()=>{
-  const v={flow5:document.getElementById("hyFlow5").value,flow20:document.getElementById("hyFlow20").value,cap:document.getElementById("hyCap").value,date:document.getElementById("hyFlowDate").value};
-  try{localStorage.setItem(HY_LS_KEY,JSON.stringify(v));hyRender();}
-  catch(e){hyMarkMissing("브라우저 저장에 실패했습니다. 저장 기능을 확인하십시오.");}
-});
-document.getElementById("hyClear").addEventListener("click",()=>{
-  localStorage.removeItem(HY_LS_KEY);
-  ["hyFlow5","hyFlow20","hyCap","hyFlowDate"].forEach(k=>document.getElementById(k).value="");
-  hyRender();
-});
-hyPopulate();
-
 /* ═══════════ 실행 ═══════════ */
 async function renderDashboard(forceReload){
   const btn=document.getElementById("btnRefresh"); btn.disabled=true;
